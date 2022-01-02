@@ -4,6 +4,7 @@
 -- -- generate explosions for the rockets
 local GAME_STATE_TITLE = "Targetting"
 local Vector = require('Vector')
+local Timer = require("knife.timer")
 WINDOW_WIDTH = 960
 WINDOW_HEIGHT = 700
 VIRTUAL_WIDTH = WINDOW_WIDTH
@@ -25,6 +26,9 @@ function createRect(color, width, height, x, y, speed, acceleration)
     velocity = Vector.fromTable({0, 1}),
     targetOrientation = Vector.fromTable({-10, 100}),
     speed = speed,
+    isActive = true,
+    state = "homing",
+    particleSystem = nil,
   }
 
   function rect:setDx(dx) rect.velocity:set(1, dx) end
@@ -50,6 +54,21 @@ function createRect(color, width, height, x, y, speed, acceleration)
     return angle
   end
 
+  function rect:changeState(newState)
+    if self.state == newState then
+      return
+    else
+      if self.state == "homing" and newState == "exploding" then
+        self.state = newState
+        local _self = self
+        gExplosionSound:play()
+        Timer.after(5, function()
+          self:getParticleSystem():stop()
+        end)
+      end
+    end
+  end
+
   function rect:calculateDiff(myRotation, targetAngle)
     -- now the diff may be larger than pi! if it is, we want to go the other way around
     local diff = targetAngle - myRotation
@@ -63,87 +82,134 @@ function createRect(color, width, height, x, y, speed, acceleration)
   end
 
   function rect:update(dt)
-    local maxRotation = math.rad(self.acceleration)
-    local myRotation = self:getNormalizedAngle(self.velocity)
-    local targetAngle = self:getNormalizedAngle(self.targetOrientation)
-    local diff = self:calculateDiff(myRotation, targetAngle)
-    --rotation = math.atan2(self.targetOrientation:get(2), self.targetOrientation:get(1))
-    local currentDx = self:getDx()
-    local currentDy = self:getDy()
+    if self.state == "homing" then
+      local maxRotation = math.rad(self.acceleration)
+      local myRotation = self:getNormalizedAngle(self.velocity)
+      local targetAngle = self:getNormalizedAngle(self.targetOrientation)
+      local diff = self:calculateDiff(myRotation, targetAngle)
+      --rotation = math.atan2(self.targetOrientation:get(2), self.targetOrientation:get(1))
+      local currentDx = self:getDx()
+      local currentDy = self:getDy()
 
-    -- why is it done this way ( -maxRotation, +maxRotation )
-    if diff > maxRotation then
-      self.rotation = myRotation  + maxRotation
-    elseif diff < -maxRotation then
-      self.rotation = myRotation - maxRotation
-    else
-      self.rotation = myRotation
+      -- why is it done this way ( -maxRotation, +maxRotation )
+      if diff > maxRotation then
+        self.rotation = myRotation  + maxRotation
+      elseif diff < -maxRotation then
+        self.rotation = myRotation - maxRotation
+      else
+        self.rotation = myRotation
+      end
+
+      -- at this point we set the rotation to be a normalized version... time to denormalize it again
+
+
+      -- love2d rotations are clockwise, but we measure the angle to target counterclockwise, so  if the angle is less than pi, we just add it
+      -- otherwise we find the complimentary angle
+      self.x = self.x + math.cos(self:getRotation()) * self.speed * dt
+      self.y = self.y + math.sin(self:getRotation()) * self.speed * dt
+
+      -- this isnt't necessary but eventually i just want to use vectors
+      self.velocity:set(1, math.cos(self:getRotation()) * self.speed )
+      self.velocity:set(2, math.sin(self:getRotation()) * self.speed )
+    elseif self.state == "exploding" then
+      -- take care of explosion animation and then set active to false
+      local ps = self:getParticleSystem()
+      ps:update(dt)
+
+      if ps:getCount() == 0 then
+        -- set the state to inactive once we have 0 particles
+        self.isActive = 0
+      end
     end
-
-    -- at this point we set the rotation to be a normalized version... time to denormalize it again
-    
-
-    -- love2d rotations are clockwise, but we measure the angle to target counterclockwise, so  if the angle is less than pi, we just add it
-    -- otherwise we find the complimentary angle
-    self.x = self.x + math.cos(self:getRotation()) * self.speed * dt
-    self.y = self.y + math.sin(self:getRotation()) * self.speed * dt
-
-    -- this isnt't necessary but eventually i just want to use vectors
-    self.velocity:set(1, math.cos(self:getRotation()) * self.speed )
-    self.velocity:set(2, math.sin(self:getRotation()) * self.speed )
   end
 
   function rect:getRotation()
-
     return self.rotation
   end
 
-  function rect:draw()
-    local mouseX, mouseY = love.mouse.getPosition()
-    local pr, pg, pb, po = love.graphics.getColor()
+  function rect:closeToPoint(x, y, tolerance)
+    -- check if the tip of the rocket is close to the point x, y
+    tolerance = tolerance ~= nil and tolerance or 5
     local rectCenterX = self.x + self.width / 2
     local rectCenterY = self.y + self.height / 2
-    local circleRadius = self.width / 2
-    -- experiment...
     local circleRadius = 7 * math.max(self.width, self.height) / 13
-    local normalVelocityVector = self.velocity:getNormalizedVector()
-    local normalTargetOrientationVector = self.targetOrientation:getNormalizedVector()
-    normalVelocityVector:iscale(circleRadius)
-    normalTargetOrientationVector:iscale(circleRadius)
-
-    local maxRotation = math.rad(self.acceleration)
     local myRotation = self:getNormalizedAngle(self.velocity)
-    local targetAngle = self:getNormalizedAngle(self.targetOrientation)
-    local diff = self:calculateDiff(myRotation, targetAngle)
 
-    -- will be needing to rotate the rectangle, push and pop allow us to change the reference point of drawing, so
-    -- we're drawing relative to the center of the reactangle
-    love.graphics.push()
-    love.graphics.translate(rectCenterX, rectCenterY)
-    love.graphics.rotate(self:getRotation())
-    love.graphics.setColor(self.color.r, self.color.g, self.color.b)
+    local edgeX = rectCenterX + math.cos(myRotation) * circleRadius
+    local edgeY = rectCenterY + math.sin(myRotation) * circleRadius
+    if ((x - edgeX) ^ 2 + (y - edgeY) ^ 2) ^ 0.5 <= tolerance then
+      return true
+    end
+    return false
+  end
 
-    -- why -self.width / 2 -- we draw relative to center of rectangle so need to subtract out the centers
-    love.graphics.rectangle("fill", -self.width / 2, -self.height / 2, self.width, self.height)
+  function rect:getParticleSystem()
+    -- lazy load the ps
+    if self.particleSystem == nil then
+        self.particleSystem = love.graphics.newParticleSystem(gParticleImage, 15)
+      	self.particleSystem:setParticleLifetime(2, 5) -- Particles live at least 2s and at most 5s.
+        self.particleSystem:setEmissionRate(5)
+        self.particleSystem:setSizeVariation(1)
+        self.particleSystem:setLinearAcceleration(-20, -20, 20, 20) -- Random movement in all directions.
+        self.particleSystem:setSpin(1, 3)
+        self.particleSystem:setColors(1, 1, 1, 1, 1, 1, 1, 0) -- Fade to transparency.
+        end
+    return self.particleSystem
+  end
 
-    -- draw the arrows
-    love.graphics.polygon("fill", self.width/2, -self.height/2 - 5, self.width/2 + 10, 0, self.width/2, self.height/2 + 5)
-    love.graphics.polygon("fill", -self.width/2, 0, -self.width/2 - 5, -self.height/2, -self.width/2, -self.height/2 - 3)
-    love.graphics.polygon("fill", -self.width/2, 0, -self.width/2 - 5, self.height/2, -self.width/2, self.height/2 + 3)
-    love.graphics.setColor(pr, pg, pb, po)
-    love.graphics.pop()
+  function rect:draw()
+    local rectCenterX = self.x + self.width / 2
+    local rectCenterY = self.y + self.height / 2
 
-    love.graphics.circle("line", rectCenterX, rectCenterY, circleRadius)
-    love.graphics.line(rectCenterX, rectCenterY, rectCenterX + circleRadius, rectCenterY)
-    love.graphics.line(rectCenterX, rectCenterY, rectCenterX + normalTargetOrientationVector:get(1), rectCenterY + normalTargetOrientationVector:get(2))
+    if self.state == "homing" then
+
+      local circleRadius = self.width / 2
+      -- experiment...
+      local circleRadius = 7 * math.max(self.width, self.height) / 13
+      local mouseX, mouseY = love.mouse.getPosition()
+      local pr, pg, pb, po = love.graphics.getColor()
+      local normalVelocityVector = self.velocity:getNormalizedVector()
+      local normalTargetOrientationVector = self.targetOrientation:getNormalizedVector()
+      normalVelocityVector:iscale(circleRadius)
+      normalTargetOrientationVector:iscale(circleRadius)
+
+      local maxRotation = math.rad(self.acceleration)
+      local myRotation = self:getNormalizedAngle(self.velocity)
+      local targetAngle = self:getNormalizedAngle(self.targetOrientation)
+      local diff = self:calculateDiff(myRotation, targetAngle)
+
+      -- will be needing to rotate the rectangle, push and pop allow us to change the reference point of drawing, so
+      -- we're drawing relative to the center of the reactangle
+      love.graphics.push()
+      love.graphics.translate(rectCenterX, rectCenterY)
+      love.graphics.rotate(self:getRotation())
+      love.graphics.setColor(self.color.r, self.color.g, self.color.b)
+
+      -- why -self.width / 2 -- we draw relative to center of rectangle so need to subtract out the centers
+      love.graphics.rectangle("fill", -self.width / 2, -self.height / 2, self.width, self.height)
+
+      -- draw the arrows
+      love.graphics.polygon("fill", self.width/2, -self.height/2 - 5, self.width/2 + 10, 0, self.width/2, self.height/2 + 5)
+      love.graphics.polygon("fill", -self.width/2, 0, -self.width/2 - 5, -self.height/2, -self.width/2, -self.height/2 - 3)
+      love.graphics.polygon("fill", -self.width/2, 0, -self.width/2 - 5, self.height/2, -self.width/2, self.height/2 + 3)
+      love.graphics.setColor(pr, pg, pb, po)
+      love.graphics.pop()
+
+      love.graphics.circle("line", rectCenterX, rectCenterY, circleRadius)
+      love.graphics.line(rectCenterX, rectCenterY, rectCenterX + circleRadius, rectCenterY)
+      love.graphics.line(rectCenterX, rectCenterY, rectCenterX + normalTargetOrientationVector:get(1), rectCenterY + normalTargetOrientationVector:get(2))
 
 
-    -- debug print
-    -- printDiagnostics("Velocity Vector: " .. tostring(self.velocity), 5, VIRTUAL_HEIGHT - 60)
-    -- printDiagnostics("Target Orientation" .. tostring(self.targetOrientation), 5, VIRTUAL_HEIGHT - 100)
-    -- printDiagnostics("Angle between: " .. tostring(math.deg(self.velocity:angleBetween(self.targetOrientation))) , 5, VIRTUAL_HEIGHT - 120)
-    -- printDiagnostics("Rotation: " .. tostring(math.deg(self:getRotation())), 5, VIRTUAL_HEIGHT - 140)
-    -- printDiagnostics("Diff: " .. tostring(math.deg(diff)), 5, VIRTUAL_HEIGHT - 160)
+      -- debug print
+      -- printDiagnostics("Velocity Vector: " .. tostring(self.velocity), 5, VIRTUAL_HEIGHT - 60)
+      -- printDiagnostics("Target Orientation" .. tostring(self.targetOrientation), 5, VIRTUAL_HEIGHT - 100)
+      -- printDiagnostics("Angle between: " .. tostring(math.deg(self.velocity:angleBetween(self.targetOrientation))) , 5, VIRTUAL_HEIGHT - 120)
+      -- printDiagnostics("Rotation: " .. tostring(math.deg(self:getRotation())), 5, VIRTUAL_HEIGHT - 140)
+      -- printDiagnostics("Diff: " .. tostring(math.deg(diff)), 5, VIRTUAL_HEIGHT - 160)
+    elseif self.state == "exploding" then
+      local ps = self:getParticleSystem()
+      love.graphics.draw(ps, rectCenterX, rectCenterY)
+    end
   end
 
   return rect
@@ -175,6 +241,10 @@ function love.load()
   love.window.setTitle(GAME_STATE_TITLE)
   love.window.setMode( VIRTUAL_WIDTH, VIRTUAL_HEIGHT, flags )
 
+  print('loading assets')
+  gParticleImage = love.graphics.newImage('explosion.png')
+  gExplosionSound = love.audio.newSource('explosion.wav', 'static')
+
   pause = false
   non_collision_color = {r=0, g=1, b=0}
   collision_color = {r=0, g=1, b=1}
@@ -202,18 +272,31 @@ end
 
 function love.update(dt)
   local mouseX, mouseY = love.mouse.getPosition()
+  Timer.update(dt)
   if not pause then
     for _, rocket in ipairs(rockets) do
-      rocket:orientTowardsPoint(mouseX, mouseY)
-      rocket:update(dt)
+      if rocket.isActive then
+        rocket:orientTowardsPoint(mouseX, mouseY)
+        rocket:update(dt)
+
+        -- collision detection
+        if rocket:closeToPoint(mouseX, mouseY) then
+          rocket:changeState("exploding")
+        end
+      end
     end
   end
 end
 
 function love.draw()
   for _, rocket in ipairs(rockets) do
-    rocket:draw()
+    if rocket.isActive then
+      rocket:draw()
+    end
   end
+
+  local mouseX, mouseY = love.mouse.getPosition()
+  love.graphics.circle("line", mouseX, mouseY, 5)
   drawFPS()
 end
 
@@ -226,4 +309,14 @@ end
 
 function drawFPS()
   printDiagnostics("FPS: " .. tostring(love.timer.getFPS()), 5, VIRTUAL_HEIGHT - 20)
+end
+
+function love.mousepressed(x, y, button, istouch)
+   if button == 1 then
+     for _, rocket in ipairs(rockets) do
+       if rocket.isActive then
+         rocket:changeState("exploding")
+       end
+     end
+   end
 end
