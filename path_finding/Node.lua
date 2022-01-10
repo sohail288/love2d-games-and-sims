@@ -13,6 +13,11 @@ function Node:init(x, y, opts)
   self.selected = false
 end
 
+function Node:reset()
+  self.selected = false
+  self.highlighted = false
+end
+
 function Node:toggleSelect()
   if self.selected then
     self.selected = false

@@ -12,6 +12,7 @@ local VIEWPORT_START_Y = 0.1 * VIRTUAL_HEIGHT
 function NodeMap:init(rows, columns, opts)
   self.rows = rows or DEFAULT_ROWS
   self.columns = columns or DEFAULT_COLUMNS
+  self.hoveredNode = nil
 
   -- generate the nodes
   self.nodes = {}
@@ -54,6 +55,45 @@ function NodeMap:findNodeAtPoint(x, y)
     return nil
   end
   return self.nodes[row + 1][col + 1]
+end
+
+function NodeMap:handleNodeHighlight(pointerX, pointerY)
+  local _hoveredNode = self:findNodeAtPoint(pointerX, pointerY)
+
+  -- refactor, this is confusing
+  if _hoveredNode ~= nil then
+    if self.hoveredNode ~= _hoveredNode then
+      if self.hoveredNode ~= nil then
+        self.hoveredNode:toggleHighlight()
+      end
+
+      self.hoveredNode = _hoveredNode
+      self.hoveredNode:toggleHighlight()
+    end
+  else
+    if self.hoveredNode ~= nil then
+      self.hoveredNode:toggleHighlight()
+      self.hoveredNode = nil
+    end
+  end
+end
+
+function NodeMap:nodeIsHighlighted()
+  return self.hoveredNode ~= nil
+end
+
+function NodeMap:handleSelectNode()
+  if self.hoveredNode ~= nil then
+    self.hoveredNode:toggleSelect()
+  end
+end
+
+function NodeMap:clear()
+  for _, nodeRow in ipairs(self.nodes) do
+    for _, node in ipairs(nodeRow) do
+      node:reset()
+    end
+  end
 end
 
 return NodeMap
