@@ -26,30 +26,33 @@ function love.load()
 end
 
 function love.mousepressed(x, y, button, istouch)
-  if button == 1 and gNodeMap:nodeIsHighlighted() then
-    gNodeMap:handleSelectNode()
-  end
-  
-  if button == 2 and gNodeMap:nodeIsHighlighted() then
-
-  end
-
-  -- handle menu inputs
   if button == 1 then
-    gMainMenu:handleMouseClick()
+      -- context menu is over all
+    if not gContextMenu.isOpen or not gContextMenu:pointWithinBounds(x, y) then
+      gMainMenu:handleMouseClick()
+
+      if gNodeMap:nodeIsHighlighted() then
+        gNodeMap:handleSelectNode()
+      end
+    end
   end
+
+  gContextMenu:handleMouseClick(button, gNodeMap:getHighlightedNode())
+  
 end
 
 function love.update(dt)
   local mouseX, mouseY = love.mouse.getPosition()
   gNodeMap:handleNodeHighlight(mouseX, mouseY)
   gMainMenu:handleMouseOver(mouseX, mouseY)
+  gContextMenu:handleMouseOver(mouseX, mouseY)
   Timer.update(dt)
 end
 
 function love.draw()
   gNodeMap:render()
   gMainMenu:render()
+  gContextMenu:render()
   local mouseX, mouseY = love.mouse.getPosition()
   love.graphics.circle("line", mouseX, mouseY, 5)
 end

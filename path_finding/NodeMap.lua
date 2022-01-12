@@ -13,6 +13,8 @@ function NodeMap:init(rows, columns, opts)
   self.rows = rows or DEFAULT_ROWS
   self.columns = columns or DEFAULT_COLUMNS
   self.hoveredNode = nil
+  self.sourceNode = nil
+  self.destinationNode = nil
 
   -- generate the nodes
   self.nodes = {}
@@ -23,6 +25,63 @@ function NodeMap:init(rows, columns, opts)
     for j = 1, self.columns do
       local node = Node(x + (j - 1) * TILE_SIZE, y + (i - 1) * TILE_SIZE)
       self.nodes[i][j] = node
+      node:setNodeMap(self)
+    end
+  end
+end
+
+function NodeMap:setSource(node)
+  if self.sourceNode ~= nil and self.sourceNode ~= node then
+    self.sourceNode.isSourceNode = false
+  end
+
+  if node == self.destinationNode then
+    self.destinationNode.isDestinationNode = false
+    self.destinationNode = nil
+  end
+
+  node.isSourceNode = true
+  node.selected = false
+  self.sourceNode = node
+end
+
+function NodeMap:getSource()
+  return self.sourceNode
+end
+
+function NodeMap:setDestination(node)
+  -- do not allow setting source as destination? or replace that?
+  if self.destinationNode ~= nil and self.destinationNode ~= node then
+    self.destinationNode.isDestinationNode = false
+  end
+
+  if node == self.sourceNode then
+    self.sourceNode.isSourceNode = false
+    self.sourceNode = nil
+  end
+  node.isDestinationNode = true
+  node.selected = false
+  self.destinationNode = node
+end
+
+function NodeMap:getDestination()
+  return self.destinationNode
+end
+
+function NodeMap:iterator()
+  local rowIdx = 1
+  local columnIdx = 0
+  return function()
+    columnIdx = columnIdx + 1
+    if columnIdx > self.columns then
+      rowIdx = rowIdx + 1
+      columnIdx = 1 
+    end
+
+    if rowIdx > self.rows then
+      return nil
+    else
+      return self.nodes[rowIdx][columnIdx]
     end
   end
 end
@@ -82,8 +141,20 @@ function NodeMap:nodeIsHighlighted()
   return self.hoveredNode ~= nil
 end
 
+function NodeMap:getHighlightedNode()
+  return self.hoveredNode
+end
+
 function NodeMap:handleSelectNode()
   if self.hoveredNode ~= nil then
+    if self.hoveredNode == self.sourceNode then
+      self.sourceNode.isSourceNode = false
+      self.sourceNode = nil
+    end
+    if self.hoveredNode == self.destinationNode then
+      self.destinationNode.isDestinationNode = false
+      self.destinationNode = nil
+    end
     self.hoveredNode:toggleSelect()
   end
 end

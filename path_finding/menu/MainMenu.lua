@@ -9,6 +9,7 @@ local MainMenu = Class{}
 
 local menuOptions = {
   title = "Algorithms",
+  layout = "column",
   menuElements = {
     uiElements.Button{
       label="Clear All",
@@ -18,12 +19,22 @@ local menuOptions = {
       end
     },
     uiElements.Button{
-      label="and click this",
+      label="Select All",
       padding=10,
       onClick=function()
-        print("and this works")
+        for node in gNodeMap:iterator() do
+          node:reset()
+          node:toggleSelect()
+        end
       end
-    }
+    },
+    uiElements.Button{
+      label="Start",
+      padding=10,
+      onClick=function()
+        print("start") 
+      end
+    },
   }
 }
 
