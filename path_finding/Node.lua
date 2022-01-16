@@ -53,6 +53,12 @@ function Node:toggleHighlight()
   end
 end
 
+function Node:getCenterCoordinates()
+  local cx = self.x + self:getWidth() / 2
+  local cy = self.y + self:getHeight() / 2
+  return cx, cy
+end
+
 function Node:render()
   local filltype = (self.selected or self.isSourceNode or self.isDestinationNode) and "fill" or "line"
   local r, g, b, a = love.graphics.getColor()
