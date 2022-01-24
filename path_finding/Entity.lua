@@ -1,12 +1,15 @@
 local Class = require('vendor/class')
-
-local Entity = Class{}
 local Vector = require('Vector')
 
-function Entity:init()
+local Entity = Class{}
+local DEFAULT_POSITION_X = 100
+local DEFAULT_POSITION_Y = 100
+
+function Entity:init(opts)
+  opts = opts or {}
   self.speed = 100
   self.rotationSpeedRads = 0.05  -- keep low to avoid glitching
-  self.position = Vector.fromTable{100, 100}
+  self.position = Vector.fromTable{opts.x or DEFAULT_POSITION_X, opts.y or DEFAULT_POSITION_Y}
   self.velocity = Vector.fromTable{1, 1}
   self.direction = Vector.fromTable{1, 1} -- this is derived from velocity?
 end

@@ -59,6 +59,10 @@ function Node:getCenterCoordinates()
   return cx, cy
 end
 
+function Node:getBounds()
+  return self.x, self.x + self:getWidth(), self.y, self.y + self:getHeight()
+end
+
 function Node:render()
   local filltype = (self.selected or self.isSourceNode or self.isDestinationNode) and "fill" or "line"
   local r, g, b, a = love.graphics.getColor()

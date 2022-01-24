@@ -9,11 +9,13 @@ local NodeMap= require('NodeMap')
 local MainMenu = require("menu/MainMenu")
 local ContextMenu = require("menu/ContextMenu")
 local Entity = require("Entity")
+local Simulator = require("Simulator")
 
 function love.load()
   love.graphics.setDefaultFilter('nearest', 'nearest')
   love.window.setTitle("Path Finding")
   gNodeMap = NodeMap()
+  gSimulator = Simulator(gNodeMap)
   hoveredNode = nil
 
   gContextMenu = ContextMenu()
@@ -40,6 +42,9 @@ function love.load()
       node:toggleSelect()
     end
     gEntity:orientTowardsNode(node)
+    for _, entity in ipairs(gSimulator.entities) do
+      entity:orientTowardsNode(node)
+    end
   end)
 end
 
@@ -66,6 +71,7 @@ function love.update(dt)
   gContextMenu:handleMouseOver(mouseX, mouseY)
   Timer.update(dt)
   gEntity:update(dt)
+  gSimulator:update(dt)
 end
 
 function love.draw()
@@ -75,6 +81,7 @@ function love.draw()
   local mouseX, mouseY = love.mouse.getPosition()
   love.graphics.circle("line", mouseX, mouseY, 5)
   gEntity:render()
+  gSimulator:render()
 end
 
 function love.keypressed(key)
