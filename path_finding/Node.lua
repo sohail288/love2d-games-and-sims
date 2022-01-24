@@ -14,6 +14,11 @@ function Node:init(x, y, opts)
   self.isSourceNode = false
   self.isDestinationNode = false
   self._nodeMap = nil
+
+  -- public fields?
+  self.visited = false
+  self.seen = false
+  self.nextNode = nil
 end
 
 function Node:setNodeMap(nm)
@@ -35,6 +40,8 @@ end
 function Node:reset()
   self.selected = false
   self.highlighted = false
+  self.seen = false
+  self.visited = false
 end
 
 function Node:toggleSelect()
@@ -84,6 +91,17 @@ function Node:render()
     love.graphics.setColor(100, 0, 100, 255)
     love.graphics.setLineWidth(1)
     love.graphics.rectangle("line", self.x + 1, self.y + 1, self.size - 2, self.size - 2)  -- draw the rectangle within the actual rectangle
+    love.graphics.setColor(r, g, b, a)
+  end
+
+  if self.nextNode~= nil then
+    local nextCx, nextCy = self.nextNode:getCenterCoordinates()
+    local cx, cy = self:getCenterCoordinates()
+    local r, g, b, a = love.graphics.getColor()
+    love.graphics.setColor(1, 0, 0, 0.6)
+    love.graphics.line(
+      cx, cy, nextCx, nextCy
+    )
     love.graphics.setColor(r, g, b, a)
   end
 end

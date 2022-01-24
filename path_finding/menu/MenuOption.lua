@@ -22,7 +22,6 @@ function MenuOption:handleClick()
   Timer.tween(1.0, {
     [self] = {_clickedBackgroundOpacity = 0}
   }):finish(function() 
-    print('done')
     self._clicked = false
   end)
 

@@ -20,7 +20,6 @@ function love.load()
 
   gContextMenu = ContextMenu()
   gMainMenu = MainMenu()
-  gEntity = Entity()
 
   push:setupScreen(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT, {
       fullscreen = false,
@@ -28,24 +27,6 @@ function love.load()
       vsync = true
     })
 
-  Timer.every(3, function() 
-    local node
-    if gNodeMap.sourceNode ~= nil then
-      node = gNodeMap.sourceNode
-    else
-      if gEntity.node ~= nil then
-        gEntity.node:toggleSelect()
-      end
-      local row = math.floor(math.random() * (gNodeMap.rows - 1)) + 1
-      local col = math.floor(math.random() * (gNodeMap.columns - 1)) + 1
-      node =  gNodeMap.nodes[row][col]
-      node:toggleSelect()
-    end
-    gEntity:orientTowardsNode(node)
-    for _, entity in ipairs(gSimulator.entities) do
-      entity:orientTowardsNode(node)
-    end
-  end)
 end
 
 function love.mousepressed(x, y, button, istouch)
@@ -70,7 +51,6 @@ function love.update(dt)
   gMainMenu:handleMouseOver(mouseX, mouseY)
   gContextMenu:handleMouseOver(mouseX, mouseY)
   Timer.update(dt)
-  gEntity:update(dt)
   gSimulator:update(dt)
 end
 
@@ -80,7 +60,6 @@ function love.draw()
   gContextMenu:render()
   local mouseX, mouseY = love.mouse.getPosition()
   love.graphics.circle("line", mouseX, mouseY, 5)
-  gEntity:render()
   gSimulator:render()
 end
 

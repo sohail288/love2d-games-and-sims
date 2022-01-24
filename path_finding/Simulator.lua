@@ -8,8 +8,29 @@ function Simulator:init(nodeMap, opts)
   self.nodeMap = nodeMap
   self.entities = {}
   self.entitiesToGenerate = opts.numEntities or 100
+  self.traversalStrategy = function(nodeMap)
+    -- random algorithm
+    if not nodeMap.destinationNode then
+      return
+    end
+    local frontier = {nodeMap.destinationNode}
 
-  self:_spawnEntities()
+    while #frontier > 0 do
+      local currentNode = table.remove(frontier)
+      local nodeRow, nodeCol = nodeMap:getNodePosition(currentNode)
+      for _, connection in ipairs({{0, 1}, {1, 0}, {-1, 0}, {0, -1}}) do
+        local neighbor = nodeMap:getNode(connection[1] + nodeRow, connection[2] + nodeCol) 
+        if neighbor ~= nil then
+          if not neighbor.visited and not neighbor.seen  and not neighbor.selected then
+            neighbor.seen = true
+            neighbor.nextNode = currentNode
+            table.insert(frontier, neighbor)
+          end
+        end
+      end
+    end
+    return
+  end
 end
 
 function Simulator:_spawnEntities()
@@ -22,6 +43,7 @@ function Simulator:_spawnEntities()
       local node = self.nodeMap.nodes[row][col]
       local l, r, t, b = node:getBounds()
       local entity = Entity{x=r + math.random() * (r - l), y=t + math.random() * (b - t)}
+      entity:orientTowardsNode(node)
       table.insert(self.entities, entity)
       i = i - 1
       attempts = 1
@@ -33,6 +55,8 @@ end
 
 
 function Simulator:start()
+  self.traversalStrategy(self.nodeMap)
+  self:_spawnEntities()
 end
 
 function Simulator:pause()
@@ -47,6 +71,15 @@ end
 function Simulator:update(dt)
   for _, entity in ipairs(self.entities) do
     entity:update(dt)
+    local entityNodePos = self.nodeMap:findNodeAtPoint(entity:getX(), entity:getY())
+    print(entityNodePos, entity.node)
+    if entity.node and entityNodePos == entity.node then
+      if entity.node.nextNode ~= nil then
+        entity:orientTowardsNode(entity.node.nextNode)
+      end
+    elseif entity.node then
+      entity:orientTowardsNode(entity.node)
+    end
   end
 end
 

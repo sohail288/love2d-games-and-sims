@@ -103,6 +103,20 @@ function NodeMap:render()
 
 end
 
+function NodeMap:getNodePosition(node)
+  local row = math.floor((node.y - VIEWPORT_START_Y) / TILE_SIZE) + 1
+  local col = math.floor((node.x - VIEWPORT_START_X) / TILE_SIZE) + 1
+  return row, col
+end
+
+function NodeMap:getNode(row, col)
+  local row = self.nodes[row]
+  if row ~= nil then
+      return row[col]
+  end
+  return nil
+end
+
 function NodeMap:findNodeAtPoint(x, y)
   -- need a linear function that maps x, y to a node
   local row = math.floor((y - VIEWPORT_START_Y) / TILE_SIZE)

@@ -32,7 +32,7 @@ local menuOptions = {
       label="Start",
       padding=10,
       onClick=function()
-        print("start") 
+        gSimulator:start()
       end
     },
   }

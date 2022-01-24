@@ -14,8 +14,20 @@ function Entity:init(opts)
   self.direction = Vector.fromTable{1, 1} -- this is derived from velocity?
 end
 
+function Entity:getX()
+  return self.position:get(1)
+end
+
+function Entity:getY()
+  return self.position:get(2)
+end
+
 function Entity:orientTowardsNode(node)
-  if self.targetNode ~= node then
+  if node == nil then
+    return
+  end
+
+  if self.node ~= node then
     self.node = node
   end
 
