@@ -10,7 +10,9 @@ function Entity:init(opts)
   self.speed = 100
   self.rotationSpeedRads = 0.05  -- keep low to avoid glitching
   self.position = Vector.fromTable{opts.x or DEFAULT_POSITION_X, opts.y or DEFAULT_POSITION_Y}
-  self.velocity = Vector.fromTable{1, 1}
+
+  -- set to non-zero value to avoid frozen entities
+  self.velocity = Vector.fromTable{0.1, 0.1}
   self.direction = Vector.fromTable{1, 1} -- this is derived from velocity?
 end
 
@@ -73,12 +75,12 @@ function Entity:orientTowardsNode(node)
     v:get(1) * math.sin(rotationAngle) + v:get(2) * math.cos(rotationAngle)
   }
   -- self.velocity = self.velocity:getNormalizedVector() * self.speed
-  self.velocity = nextVelocity
+  self.velocity = nextVelocity:getNormalizedVector() * self.speed
 end
 
 function Entity:update(dt)
   self:orientTowardsNode()
-  self.position:iadd(self.velocity *  dt * self.speed)
+  self.position:iadd(self.velocity *  dt)
 end
 
 function Entity:render()
@@ -89,7 +91,7 @@ function Entity:render()
   love.graphics.translate(self.position:get(1), self.position:get(2))
   love.graphics.setColor(1, 0, 0, 0.3)
   love.graphics.line(
-    0, 0, self.velocity:get(1) * self.speed, self.velocity:get(2) * self.speed
+    0, 0, self.velocity:get(1), self.velocity:get(2)
   )
   love.graphics.pop()
   love.graphics.setColor(r, g, b, a)

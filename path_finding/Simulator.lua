@@ -34,21 +34,33 @@ function Simulator:init(nodeMap, opts)
 end
 
 function Simulator:_spawnEntities()
+  local startNode = self.nodeMap.sourceNode
   local i = self.entitiesToGenerate
   local attempts = 1
   while i > 0  and attempts <= 5 do
-    local row = math.floor(math.random() * (self.nodeMap.rows - 1)) + 1
-    local col = math.floor(math.random() * (self.nodeMap.columns - 1)) + 1
-    if not self.nodeMap.nodes[row][col].selected then
-      local node = self.nodeMap.nodes[row][col]
+    if startNode ~= nil then
+      local node = startNode
+      local nodeRow, nodeCol = self.nodeMap:getNodePosition(node)
       local l, r, t, b = node:getBounds()
-      local entity = Entity{x=r + math.random() * (r - l), y=t + math.random() * (b - t)}
+      local entity = Entity{x=math.random() * 10 +  (r + l) / 2, y=math.random() * 10 + (b + t) / 2}
       entity:orientTowardsNode(node)
       table.insert(self.entities, entity)
       i = i - 1
-      attempts = 1
+
     else
-      attempts = attempts + 1
+      local row = math.floor(math.random() * (self.nodeMap.rows - 1)) + 1
+      local col = math.floor(math.random() * (self.nodeMap.columns - 1)) + 1
+      if not self.nodeMap.nodes[row][col].selected then
+        local node = self.nodeMap.nodes[row][col]
+        local l, r, t, b = node:getBounds()
+        local entity = Entity{x=r + math.random() * (r - l), y=t + math.random() * (b - t)}
+        entity:orientTowardsNode(node)
+        table.insert(self.entities, entity)
+        i = i - 1
+        attempts = 1
+      else
+        attempts = attempts + 1
+      end
     end
   end
 end
@@ -72,7 +84,6 @@ function Simulator:update(dt)
   for _, entity in ipairs(self.entities) do
     entity:update(dt)
     local entityNodePos = self.nodeMap:findNodeAtPoint(entity:getX(), entity:getY())
-    print(entityNodePos, entity.node)
     if entity.node and entityNodePos == entity.node then
       if entity.node.nextNode ~= nil then
         entity:orientTowardsNode(entity.node.nextNode)
