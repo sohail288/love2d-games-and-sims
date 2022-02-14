@@ -5,6 +5,7 @@ local Simulator = Class{}
 
 function Simulator:init(nodeMap, opts)
   opts = opts or {}
+  self.state = "stopped"
   self.nodeMap = nodeMap
   self.entities = {}
   self.entitiesToGenerate = opts.numEntities or 100
@@ -13,18 +14,27 @@ function Simulator:init(nodeMap, opts)
     if not nodeMap.destinationNode then
       return
     end
+
+    for node in nodeMap:iterator() do
+      node:clearTraversalData()
+    end
+
+    nodeMap.destinationNode.distanceToDest = 0
     local frontier = {nodeMap.destinationNode}
 
     while #frontier > 0 do
       local currentNode = table.remove(frontier)
       local nodeRow, nodeCol = nodeMap:getNodePosition(currentNode)
       for _, connection in ipairs({{0, 1}, {1, 0}, {-1, 0}, {0, -1}}) do
-        local neighbor = nodeMap:getNode(connection[1] + nodeRow, connection[2] + nodeCol) 
+        local neighbor = nodeMap:getNode(connection[1] + nodeRow, connection[2] + nodeCol)
         if neighbor ~= nil then
-          if not neighbor.visited and not neighbor.seen  and not neighbor.selected then
+          if not neighbor.selected then
             neighbor.seen = true
-            neighbor.nextNode = currentNode
-            table.insert(frontier, neighbor)
+            if neighbor.distanceToDest > currentNode.distanceToDest + 1 then
+              neighbor.nextNode = currentNode
+              neighbor.distanceToDest = currentNode.distanceToDest + 1
+              table.insert(frontier, neighbor)
+            end
           end
         end
       end
@@ -42,7 +52,7 @@ function Simulator:_spawnEntities()
       local node = startNode
       local nodeRow, nodeCol = self.nodeMap:getNodePosition(node)
       local l, r, t, b = node:getBounds()
-      local entity = Entity{x=math.random() * 10 +  (r + l) / 2, y=math.random() * 10 + (b + t) / 2}
+      local entity = Entity{x=math.random() * 30 +  (r + l) / 2, y=math.random() * 30 + (b + t) / 2}
       entity:orientTowardsNode(node)
       table.insert(self.entities, entity)
       i = i - 1
@@ -67,8 +77,15 @@ end
 
 
 function Simulator:start()
+  if self.state == "stopped" then
+    self.state = "started"
+    self.traversalStrategy(self.nodeMap)
+    self:_spawnEntities()
+  end
+end
+
+function Simulator:recalculateTraversal()
   self.traversalStrategy(self.nodeMap)
-  self:_spawnEntities()
 end
 
 function Simulator:pause()

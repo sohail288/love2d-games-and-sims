@@ -18,6 +18,7 @@ function Node:init(x, y, opts)
   -- public fields?
   self.visited = false
   self.seen = false
+  self.distanceToDest = math.huge
   self.nextNode = nil
 end
 
@@ -42,6 +43,13 @@ function Node:reset()
   self.highlighted = false
   self.seen = false
   self.visited = false
+  self.distanceToDest = math.huge
+end
+
+function Node:clearTraversalData()
+  self.seen = false
+  self.visited = false
+  self.distanceToDest = math.huge
 end
 
 function Node:toggleSelect()

@@ -37,12 +37,15 @@ function love.mousepressed(x, y, button, istouch)
 
       if gNodeMap:nodeIsHighlighted() then
         gNodeMap:handleSelectNode()
+        if gSimulator.state == "started" then
+          gSimulator:recalculateTraversal()
+        end
       end
     end
   end
 
   gContextMenu:handleMouseClick(button, gNodeMap:getHighlightedNode())
-  
+
 end
 
 function love.update(dt)
