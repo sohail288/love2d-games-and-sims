@@ -39,8 +39,8 @@ function Simulator:init(nodeMap, opts)
         end
       end
     end
-    return
   end
+  self.nodeMap:addObserver(self.traversalStrategy)
 end
 
 function Simulator:_spawnEntities()

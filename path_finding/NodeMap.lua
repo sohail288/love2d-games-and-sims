@@ -10,11 +10,13 @@ local VIEWPORT_START_X = 0.1 * VIRTUAL_WIDTH
 local VIEWPORT_START_Y = 0.1 * VIRTUAL_HEIGHT
 
 function NodeMap:init(rows, columns, opts)
+  opts = opts or {}
   self.rows = rows or DEFAULT_ROWS
   self.columns = columns or DEFAULT_COLUMNS
   self.hoveredNode = nil
   self.sourceNode = nil
   self.destinationNode = nil
+  self.observers = opts.observers or {}
 
   -- generate the nodes
   self.nodes = {}
@@ -26,6 +28,19 @@ function NodeMap:init(rows, columns, opts)
       local node = Node(x + (j - 1) * TILE_SIZE, y + (i - 1) * TILE_SIZE)
       self.nodes[i][j] = node
       node:setNodeMap(self)
+    end
+  end
+end
+
+function NodeMap:addObserver(observer)
+  self.observers[observer] = true
+end
+
+function NodeMap:removeObserver(targetObserver)
+  for _, observer in ipairs(self.observers) do
+    if observer ==  targetObserver then
+      -- TODO: instead delete observer and shift elements to left
+      self.observers[targetObserver] = false
     end
   end
 end
@@ -87,10 +102,6 @@ function NodeMap:iterator()
 end
 
 function NodeMap:update(dt)
-end
-
-function NodeMap:clear()
-  -- clear all node states
 end
 
 function NodeMap:render()
@@ -170,6 +181,11 @@ function NodeMap:handleSelectNode()
       self.destinationNode = nil
     end
     self.hoveredNode:toggleSelect()
+    for observer, observerIsActive in pairs(self.observers) do
+      if observerIsActive then
+        observer(self, self.hoveredNode)
+      end
+    end
   end
 end
 
