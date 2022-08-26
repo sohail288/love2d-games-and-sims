@@ -3,7 +3,7 @@ local function vectorToString(vector)
   if vector.n == nil then
     return tostring(getmetatable(vector))
   end
-  for i=1, vector.n do
+  for i = 1, vector.n do
     if i == 1 then
       vectorString = vectorString .. tostring(vector:get(i))
     else
@@ -14,7 +14,7 @@ local function vectorToString(vector)
   return vectorString
 end
 
-local  VectorMeta = {}
+local VectorMeta = {}
 
 function VectorMeta.__call(t, ...)
   local newObj = {}
@@ -43,7 +43,7 @@ function VectorMeta:init(n)
   -- create a zeroed vector
   self._table = {}
   self.n = n
-  for i=1, n do
+  for i = 1, n do
     self._table[i] = 0
   end
 end
@@ -58,7 +58,7 @@ end
 
 function VectorMeta:iadd(other_vector)
   if other_vector.n ~= self.n then
-    error("other vector has size " .. tostring(other_vector.n) .. " : but should be " .. tostring(self.n) )
+    error("other vector has size " .. tostring(other_vector.n) .. " : but should be " .. tostring(self.n))
   end
   for i, self_value in ipairs(self._table) do
     self._table[i] = self_value + other_vector:get(i)
@@ -67,7 +67,7 @@ end
 
 function VectorMeta:isubstract(other_vector)
   if other_vector.n ~= self.n then
-    error("other vector has size " .. tostring(other_vector.n) .. " : but should be " .. tostring(self.n) )
+    error("other vector has size " .. tostring(other_vector.n) .. " : but should be " .. tostring(self.n))
   end
   for i, self_value in ipairs(self._table) do
     self._table[i] = self_value - other_vector:get(i)
@@ -82,9 +82,9 @@ end
 
 function VectorMeta:dot(other_vector)
   if other_vector.n ~= self.n then
-    error("other vector has size " .. tostring(other_vector.n) .. " : but should be " .. tostring(self.n) )
+    error("other vector has size " .. tostring(other_vector.n) .. " : but should be " .. tostring(self.n))
   end
-  local sum =  0
+  local sum = 0
   for i, v in ipairs(self._table) do
     sum = sum + v * other_vector:get(i)
   end
@@ -116,9 +116,9 @@ function VectorMeta:getNormalizedVector()
 end
 
 function VectorMeta:getBasisAngle()
-    -- it's because angleBetween will only return values between 0 and pi
-    -- this gives the compliment angle
-    -- this then returns a value between 0 and 2 * pi
+  -- it's because angleBetween will only return values between 0 and pi
+  -- this gives the compliment angle
+  -- this then returns a value between 0 and 2 * pi
   local angle = self:angleBetween(self._BASIS_VECTOR)
   if self:get(2) < 0 then
     return 2 * math.pi - angle
@@ -134,9 +134,19 @@ function VectorMeta:__mul(alpha)
   return result
 end
 
+function VectorMeta:__add(other_vector)
+  if other_vector.n ~= self.n then
+    error("other vector has size " .. tostring(other_vector.n) .. " : but should be " .. tostring(self.n))
+  end
+  local result = VectorMeta:new(nil, self.n)
+  for i, v in ipairs(self._table) do
+    result:set(i, v + other_vector:get(i))
+  end
+  return result
+end
 
-local Vector = setmetatable({__index=VectorMeta, fromTable=VectorMeta.fromTable}, VectorMeta)
+local Vector = setmetatable({ __index = VectorMeta, fromTable = VectorMeta.fromTable }, VectorMeta)
 
-VectorMeta._BASIS_VECTOR = Vector.fromTable{1, 0}
+VectorMeta._BASIS_VECTOR = Vector.fromTable { 1, 0 }
 
 return Vector

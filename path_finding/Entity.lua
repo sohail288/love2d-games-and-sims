@@ -8,6 +8,8 @@ local DEFAULT_POSITION_Y = 100
 function Entity:init(opts)
   opts = opts or {}
   self.speed = 100
+  self.health = opts.health or 100
+  self.active = true
   self.rotationSpeedRads = 0.05  -- keep low to avoid glitching
   self.position = Vector.fromTable{opts.x or DEFAULT_POSITION_X, opts.y or DEFAULT_POSITION_Y}
 

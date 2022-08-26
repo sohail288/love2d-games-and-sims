@@ -18,7 +18,7 @@ function love.load()
   gSimulator = Simulator(gNodeMap)
   hoveredNode = nil
 
-  gContextMenu = ContextMenu()
+  gContextMenu = ContextMenu{simulator=gSimulator}
   gMainMenu = MainMenu()
 
   push:setupScreen(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT, {

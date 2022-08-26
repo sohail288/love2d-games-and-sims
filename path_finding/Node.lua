@@ -1,8 +1,10 @@
 local Class = require('vendor/class')
 
-local globals = require('globals')
+require('globals')
 
-local Node = Class{}
+local Obstacle = require('Obstacle')
+
+local Node = Class {}
 
 function Node:init(x, y, opts)
   opts = opts or {}
@@ -14,6 +16,7 @@ function Node:init(x, y, opts)
   self.isSourceNode = false
   self.isDestinationNode = false
   self._nodeMap = nil
+  self._obstacle = nil
 
   -- public fields?
   self.visited = false
@@ -78,16 +81,34 @@ function Node:getBounds()
   return self.x, self.x + self:getWidth(), self.y, self.y + self:getHeight()
 end
 
+function Node:addObstacle(simulator)
+  if self._obstacle ~= nil then
+    return
+  end
+
+  self._obstacle = Obstacle(self, { simulator = simulator })
+end
+
+function Node:removeObstacle()
+  self._obstacle = nil
+end
+
+function Node:update(dt)
+  if self._obstacle ~= nil then
+    self._obstacle:update(dt)
+  end
+end
+
 function Node:render()
   local filltype = (self.selected or self.isSourceNode or self.isDestinationNode) and "fill" or "line"
   local r, g, b, a = love.graphics.getColor()
-  local fillColor = {1, 1, 1, 1}
+  local fillColor = { 1, 1, 1, 1 }
   if self.isSourceNode then
-    fillColor = {0, 0.7, 0.7, 0.7}
+    fillColor = { 0, 0.7, 0.7, 0.7 }
   end
 
   if self.isDestinationNode then
-    fillColor = {1, 0.1, 0.1, 0.7}
+    fillColor = { 1, 0.1, 0.1, 0.7 }
   end
 
   -- abstract this out?
@@ -98,11 +119,11 @@ function Node:render()
   if self.highlighted then
     love.graphics.setColor(100, 0, 100, 255)
     love.graphics.setLineWidth(1)
-    love.graphics.rectangle("line", self.x + 1, self.y + 1, self.size - 2, self.size - 2)  -- draw the rectangle within the actual rectangle
+    love.graphics.rectangle("line", self.x + 1, self.y + 1, self.size - 2, self.size - 2) -- draw the rectangle within the actual rectangle
     love.graphics.setColor(r, g, b, a)
   end
 
-  if self.nextNode~= nil then
+  if self.nextNode ~= nil then
     local nextCx, nextCy = self.nextNode:getCenterCoordinates()
     local cx, cy = self:getCenterCoordinates()
     local r, g, b, a = love.graphics.getColor()
@@ -111,6 +132,10 @@ function Node:render()
       cx, cy, nextCx, nextCy
     )
     love.graphics.setColor(r, g, b, a)
+  end
+
+  if self._obstacle ~= nil then
+    self._obstacle:render()
   end
 end
 

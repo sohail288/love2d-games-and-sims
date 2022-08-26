@@ -2,12 +2,12 @@ local Class = require('vendor/class')
 
 local globals = require('globals')
 
-local ContextMenu = Class{}
+local ContextMenu = Class {}
 
 local menuOptions = {
   {
     title = "Set as Source",
-    onClick = function (contextMenu)
+    onClick = function(contextMenu)
       local node = contextMenu:getContext()
       local nm = node:getNodeMap()
       nm:setSource(node)
@@ -15,10 +15,24 @@ local menuOptions = {
   },
   {
     title = "Set as Destination",
-    onClick = function (contextMenu)
+    onClick = function(contextMenu)
       local node = contextMenu:getContext()
       local nm = node:getNodeMap()
       nm:setDestination(node)
+    end
+  },
+  {
+    title = "Add obstacle",
+    onClick = function(contextMenu)
+      local node = contextMenu:getContext()
+      node:addObstacle(contextMenu._simulator)
+    end
+  },
+  {
+    title = "Remove obstacle",
+    onClick = function(contextMenu)
+      local node = contextMenu.getContext()
+      node:removeObstacle()
     end
   },
 }
@@ -27,6 +41,7 @@ function ContextMenu:init(opts)
   opts = opts or {}
   self.isOpen = false
   self._context = nil
+  self._simulator = opts.simulator
   self._selectedOption = nil
   self.menuOptions = opts.menuOptions or menuOptions
 
@@ -88,13 +103,13 @@ function ContextMenu:handleMouseOver(x, y)
 
   -- one menu item per line so we can ignore the x axis since we know we are in the context menu
   local _, menuY = self:getCoordinates()
-  
+
   local selectedOption = math.ceil(((y - menuY) / self._menuOptionHeight))
   if selectedOption < 1 or selectedOption > #self.menuOptions then
     print("invalid option selected? " .. tostring(selectedOption) .. " - " .. tostring(menuY) .. " - " .. tostring(y))
     return
   end
-  
+
   self.selectedOption = selectedOption
 end
 
@@ -115,7 +130,7 @@ function ContextMenu:render()
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.rectangle("line", x - 1, y - 1, self.width + 2, self.height + 2)
     love.graphics.setColor(r, g, b, a)
-    
+
     love.graphics.push()
     local startY = y
     local height = self._menuOptionHeight
