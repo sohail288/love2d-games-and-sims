@@ -80,6 +80,8 @@ function Simulator:start()
     self.state = "started"
     self.traversalStrategy(self.nodeMap)
     self:_spawnEntities()
+  elseif self.state == "paused" then
+    self.state = "started"
   end
 end
 
@@ -88,9 +90,21 @@ function Simulator:recalculateTraversal()
 end
 
 function Simulator:pause()
+  self.state = "paused"
 end
 
 function Simulator:stop()
+  self.entities = {}
+  self.state = "stopped"
+  for node in self.nodeMap:iterator() do
+    if node.nextNode ~= nil then
+      node.nextNode = nil
+    end
+
+    if node._obstacle ~= nil then
+      node._obstacle.targetedEntity = nil
+    end
+  end
 end
 
 function Simulator:step()
@@ -115,6 +129,30 @@ function Simulator:entityIterator()
 end
 
 function Simulator:update(dt)
+  if self.state == "paused" then
+    return
+  end
+
+  local nodeProjectiles = {}
+  for node in self.nodeMap:iterator() do
+    nodeProjectiles[node] = {}
+  end
+
+  for node in self.nodeMap:iterator() do
+    if node._obstacle then
+      node._obstacle:setTargetEntity(self.nodeMap)
+      node._obstacle:update(dt)
+
+      for _, projectile in ipairs(node._obstacle._projectiles) do
+        local projectileNode = self.nodeMap:findNodeAtPoint(projectile.position:get(1), projectile.position:get(2))
+
+        if projectileNode then
+          table.insert(nodeProjectiles[projectileNode], projectile)
+        end
+      end
+    end
+  end
+
   for entity in self:entityIterator() do
     entity:update(dt)
     local entityNodePos = self.nodeMap:findNodeAtPoint(entity:getX(), entity:getY())
@@ -129,14 +167,22 @@ function Simulator:update(dt)
     elseif entity.node then
       entity:orientTowardsNode(entity.node)
     end
-  end
 
-  for node in self.nodeMap:iterator() do
-    if node._obstacle then
-      node._obstacle:setTargetEntity(self.nodeMap)
-      node._obstacle:update(dt)
+    -- check collisions
+    if entityNodePos then
+      for _, projectile in ipairs(nodeProjectiles[entityNodePos]) do
+        local distanceFromProjectile = (projectile.position - entity.position):magnitude()
+        if distanceFromProjectile - entity.size - projectile.size < 0 and projectile.active then
+          -- collision
+          print(entity, projectile, "collision")
+          entity.active = false
+          projectile.active = false
+          break
+        end
+      end
     end
   end
+
 end
 
 function Simulator:render()

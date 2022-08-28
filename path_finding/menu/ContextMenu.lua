@@ -31,7 +31,7 @@ local menuOptions = {
   {
     title = "Remove obstacle",
     onClick = function(contextMenu)
-      local node = contextMenu.getContext()
+      local node = contextMenu:getContext()
       node:removeObstacle()
     end
   },

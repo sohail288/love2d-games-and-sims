@@ -5,18 +5,21 @@ local Vector = require('Vector')
 
 local function createProjectile(origin, velocity)
   local projectile = {
-    speed = 100,
+    speed = 200,
+    size = 5,
     position = Vector.fromTable { origin:get(1), origin:get(2) },
     velocity = Vector.fromTable { velocity:get(1), origin:get(2) },
-    state = "active",
+    active = true,
   }
   function projectile:render()
-    love.graphics.circle("fill", self.position:get(1), self.position:get(2), 5)
+    love.graphics.circle("fill", self.position:get(1), self.position:get(2), self.size)
   end
 
   function projectile:update(dt)
-    self.velocity = velocity:getNormalizedVector() * self.speed
-    self.position:iadd(self.velocity * dt)
+    if self.active then
+      self.velocity = velocity:getNormalizedVector() * self.speed
+      self.position:iadd(self.velocity * dt)
+    end
   end
 
   return projectile
@@ -35,16 +38,16 @@ function Obstacle:init(node, opts)
   self._simulator = opts.simulator
 
   self._projectiles = {}
+  self._maxProjectiles = 10
+  self._coolDownTimeSeconds = 0.250
+  self._coolDownTimer = 0.0
 end
 
 local function deltaRadians(positionA, positionB)
-  local targetVector = Vector.fromTable {
-    positionB:get(1) - positionA:get(1),
-    positionB:get(2) - positionA:get(2),
-  }
+  local targetVector = positionB - positionA
 
   -- can we do a direct comparison? would always be between {0, pi}
-  local targetAngleFromBasis = positionB:getBasisAngle()
+  local targetAngleFromBasis = targetVector:getBasisAngle()
   local myRotationFromBasis = positionA:getBasisAngle()
   local angleBetween = targetAngleFromBasis - myRotationFromBasis
 
@@ -128,14 +131,19 @@ function Obstacle:fireTo(target)
 end
 
 function Obstacle:update(dt)
+  if self._coolDownTimer > 0 then
+    self._coolDownTimer = math.max(self._coolDownTimer - dt, 0)
+  end
   -- let's find the target entity...
   -- how do we get to the nodeMap
-  if self.targetedEntity ~= nil then
+  if self.targetedEntity ~= nil and self.targetedEntity.active then
     local predictedEntityPosition = self.targetedEntity.position + self.targetedEntity.velocity
     self:orientTowardsLocation(predictedEntityPosition)
-    if math.abs(deltaRadians(self.position, predictedEntityPosition)) < 2 * self.rotationSpeedRads then
+    print(self, "angle diff", deltaRadians(self.position, predictedEntityPosition))
+    if math.abs(deltaRadians(self.position, predictedEntityPosition)) < math.pi / 6 and self._coolDownTimer <= 0 and #self._projectiles < self._maxProjectiles then
       local projectile = createProjectile(self.position, self.direction:getNormalizedVector())
       table.insert(self._projectiles, projectile)
+      self._coolDownTimer = self._coolDownTimeSeconds
     end
   end
   -- in the node..., kill the entity...
@@ -147,7 +155,12 @@ function Obstacle:update(dt)
       table.insert(nextProjectiles, projectile)
     end
   end
+
   self._projectiles = nextProjectiles
+
+  if #self._projectiles > self._maxProjectiles then
+    self._coolDownTimer = self._coolDownTimeSeconds
+  end
 end
 
 function Obstacle:render()
@@ -169,7 +182,9 @@ function Obstacle:render()
   love.graphics.setLineWidth(oLineWidth)
 
   for _, projectile in ipairs(self._projectiles) do
-    projectile:render()
+    if projectile.active then
+      projectile:render()
+    end
   end
 end
 

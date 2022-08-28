@@ -35,6 +35,20 @@ local menuOptions = {
         gSimulator:start()
       end
     },
+    uiElements.Button{
+      label="Stop",
+      padding=10,
+      onClick=function()
+        gSimulator:stop()
+      end
+    },
+    uiElements.Button{
+      label="Pause",
+      padding=10,
+      onClick=function()
+        gSimulator:pause()
+      end
+    },
   }
 }
 

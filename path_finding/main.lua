@@ -5,7 +5,7 @@ local Timer = require 'vendor/knife/timer'
 
 local globals = require('globals')
 
-local NodeMap= require('NodeMap')
+local NodeMap = require('NodeMap')
 local MainMenu = require("menu/MainMenu")
 local ContextMenu = require("menu/ContextMenu")
 local Entity = require("Entity")
@@ -15,23 +15,23 @@ function love.load()
   love.graphics.setDefaultFilter('nearest', 'nearest')
   love.window.setTitle("Path Finding")
   gNodeMap = NodeMap()
-  gSimulator = Simulator(gNodeMap)
+  gSimulator = Simulator(gNodeMap, { numEntities = 1 })
   hoveredNode = nil
 
-  gContextMenu = ContextMenu{simulator=gSimulator}
+  gContextMenu = ContextMenu { simulator = gSimulator }
   gMainMenu = MainMenu()
 
   push:setupScreen(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT, {
-      fullscreen = false,
-      resizable = true,
-      vsync = true
-    })
+    fullscreen = false,
+    resizable = true,
+    vsync = true
+  })
 
 end
 
 function love.mousepressed(x, y, button, istouch)
   if button == 1 then
-      -- context menu is over all
+    -- context menu is over all
     if not gContextMenu.isOpen or not gContextMenu:pointWithinBounds(x, y) then
       gMainMenu:handleMouseClick()
 

@@ -145,6 +145,25 @@ function VectorMeta:__add(other_vector)
   return result
 end
 
+function VectorMeta:__sub(other_vector)
+  if other_vector.n ~= self.n then
+    error("other vector has size " .. tostring(other_vector.n) .. " : but should be " .. tostring(self.n))
+  end
+  local result = VectorMeta:new(nil, self.n)
+  for i, v in ipairs(self._table) do
+    result:set(i, v - other_vector:get(i))
+  end
+  return result
+end
+
+function VectorMeta:__pow(exponent)
+  local result = VectorMeta:new(nil, self.n)
+  for i, v in ipairs(self._table) do
+    result:set(i, v ^ exponent)
+  end
+  return result
+end
+
 local Vector = setmetatable({ __index = VectorMeta, fromTable = VectorMeta.fromTable }, VectorMeta)
 
 VectorMeta._BASIS_VECTOR = Vector.fromTable { 1, 0 }

@@ -1,7 +1,7 @@
 local Class = require('vendor/class')
 local Vector = require('Vector')
 
-local Entity = Class{}
+local Entity = Class {}
 local DEFAULT_POSITION_X = 100
 local DEFAULT_POSITION_Y = 100
 
@@ -10,12 +10,13 @@ function Entity:init(opts)
   self.speed = 100
   self.health = opts.health or 100
   self.active = true
-  self.rotationSpeedRads = 0.05  -- keep low to avoid glitching
-  self.position = Vector.fromTable{opts.x or DEFAULT_POSITION_X, opts.y or DEFAULT_POSITION_Y}
+  self.size = 5
+  self.rotationSpeedRads = 0.05 -- keep low to avoid glitching
+  self.position = Vector.fromTable { opts.x or DEFAULT_POSITION_X, opts.y or DEFAULT_POSITION_Y }
 
   -- set to non-zero value to avoid frozen entities
-  self.velocity = Vector.fromTable{0.1, 0.1}
-  self.direction = Vector.fromTable{1, 1} -- this is derived from velocity?
+  self.velocity = Vector.fromTable { 0.1, 0.1 }
+  self.direction = Vector.fromTable { 1, 1 } -- this is derived from velocity?
 end
 
 function Entity:getX()
@@ -41,7 +42,7 @@ function Entity:orientTowardsNode(node)
   local targetCx, targetCy = self.node:getCenterCoordinates()
 
   -- our future orientation
-  local targetVector = Vector.fromTable{
+  local targetVector = Vector.fromTable {
     targetCx - self.position:get(1),
     targetCy - self.position:get(2),
   }
@@ -50,14 +51,14 @@ function Entity:orientTowardsNode(node)
   local targetAngleFromBasis = targetVector:getBasisAngle()
   local myRotationFromBasis = self.velocity:getBasisAngle()
   local angleBetween = targetAngleFromBasis - myRotationFromBasis
-  
+
   -- this calculates the short way around if our angle is less than -pi or greater than pi
   -- we just add a circle to get the complimentary angle
   if angleBetween > math.pi then
     angleBetween = angleBetween - 2 * math.pi
   elseif angleBetween < -math.pi then
     angleBetween = angleBetween + 2 * math.pi
-  end 
+  end
 
   if angleBetween > self.rotationSpeedRads then
     rotationAngle = self.rotationSpeedRads
@@ -72,7 +73,7 @@ function Entity:orientTowardsNode(node)
   -- https://en.wikipedia.org/wiki/Rotation_matrix
   local v = self.velocity
   -- print(v, angleBetween, rotationAngle)
-  local nextVelocity = Vector.fromTable{
+  local nextVelocity = Vector.fromTable {
     v:get(1) * math.cos(rotationAngle) - v:get(2) * math.sin(rotationAngle),
     v:get(1) * math.sin(rotationAngle) + v:get(2) * math.cos(rotationAngle)
   }
@@ -82,13 +83,13 @@ end
 
 function Entity:update(dt)
   self:orientTowardsNode()
-  self.position:iadd(self.velocity *  dt)
+  self.position:iadd(self.velocity * dt)
 end
 
 function Entity:render()
   local r, g, b, a = love.graphics.getColor()
   love.graphics.setColor(0, 0.3, 0.8, 0.9)
-  love.graphics.circle("fill", self.position:get(1), self.position:get(2), 5)
+  love.graphics.circle("fill", self.position:get(1), self.position:get(2), self.size)
   love.graphics.push()
   love.graphics.translate(self.position:get(1), self.position:get(2))
   love.graphics.setColor(1, 0, 0, 0.3)
