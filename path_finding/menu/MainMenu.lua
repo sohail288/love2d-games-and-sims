@@ -4,52 +4,54 @@ local globals = require('globals')
 
 local uiElements = require('menu/MenuOption')
 
-local MainMenu = Class{}
+local MainMenu = Class {}
 
 
 local menuOptions = {
   title = "Algorithms",
   layout = "column",
   menuElements = {
-    uiElements.Button{
-      label="Clear All",
-      padding=10,
-      onClick=function()
+    uiElements.Button {
+      label = "Clear All",
+      padding = 10,
+      onClick = function()
         gNodeMap:clear()
       end
     },
-    uiElements.Button{
-      label="Select All",
-      padding=10,
-      onClick=function()
+    uiElements.Button {
+      label = "Select All",
+      padding = 10,
+      onClick = function()
         for node in gNodeMap:iterator() do
           node:reset()
           node:toggleSelect()
         end
       end
     },
-    uiElements.Button{
-      label="Start",
-      padding=10,
-      onClick=function()
+    uiElements.Button {
+      label = "Start",
+      padding = 10,
+      onClick = function()
         gSimulator:start()
       end
     },
-    uiElements.Button{
-      label="Stop",
-      padding=10,
-      onClick=function()
+    uiElements.Button {
+      label = "Stop",
+      padding = 10,
+      onClick = function()
         gSimulator:stop()
       end
     },
-    uiElements.Button{
-      label="Pause",
-      padding=10,
-      onClick=function()
+    uiElements.Button {
+      label = "Pause",
+      padding = 10,
+      onClick = function()
         gSimulator:pause()
       end
     },
   }
+  -- need stateful input
+  -- need button rows
 }
 
 local marginBottom = 10
@@ -122,7 +124,7 @@ function MainMenu:handleMouseClick()
 end
 
 function MainMenu:render()
-  love.graphics.printf(self.title, self.x, self.y, self.width, "center") 
+  love.graphics.printf(self.title, self.x, self.y, self.width, "center")
   for _, element in ipairs(self.menuElements) do
     element:render()
   end

@@ -34,7 +34,7 @@ function Obstacle:init(node, opts)
   opts.y = cy
   Entity.init(self, opts)
   self.node = node
-  self.rotationSpeedRads = 0.15
+  self.rotationSpeedRads = 0.10
   self._simulator = opts.simulator
 
   self._projectiles = {}
@@ -43,12 +43,12 @@ function Obstacle:init(node, opts)
   self._coolDownTimer = 0.0
 end
 
-local function deltaRadians(positionA, positionB)
+local function rotationDelta(currentDirection, positionA, positionB)
   local targetVector = positionB - positionA
 
   -- can we do a direct comparison? would always be between {0, pi}
   local targetAngleFromBasis = targetVector:getBasisAngle()
-  local myRotationFromBasis = positionA:getBasisAngle()
+  local myRotationFromBasis = currentDirection:getBasisAngle()
   local angleBetween = targetAngleFromBasis - myRotationFromBasis
 
   -- this calculates the short way around if our angle is less than -pi or greater than pi
@@ -139,8 +139,8 @@ function Obstacle:update(dt)
   if self.targetedEntity ~= nil and self.targetedEntity.active then
     local predictedEntityPosition = self.targetedEntity.position + self.targetedEntity.velocity
     self:orientTowardsLocation(predictedEntityPosition)
-    print(self, "angle diff", deltaRadians(self.position, predictedEntityPosition))
-    if math.abs(deltaRadians(self.position, predictedEntityPosition)) < math.pi / 6 and self._coolDownTimer <= 0 and #self._projectiles < self._maxProjectiles then
+    print(self, "angle diff", rotationDelta(self.direction, self.position, predictedEntityPosition))
+    if math.abs(rotationDelta(self.direction, self.position, predictedEntityPosition)) < 0.05 and self._coolDownTimer <= 0 and #self._projectiles < self._maxProjectiles then
       local projectile = createProjectile(self.position, self.direction:getNormalizedVector())
       table.insert(self._projectiles, projectile)
       self._coolDownTimer = self._coolDownTimeSeconds

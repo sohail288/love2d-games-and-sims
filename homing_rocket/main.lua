@@ -47,6 +47,9 @@ function createRect(color, width, height, x, y, speed, acceleration)
 
   function rect:getNormalizedAngle(vector)
     -- can't remmember why this was necessary, I think it was due to how lua coordinate system behaves vs mathematical way
+    -- it's because angleBetween will only return values between 0 and pi
+    -- this gives the compliment angle
+    -- vector can have this method
     local angle = BASIS_VECTOR:angleBetween(vector)
     if vector:get(2) < 0 then
       angle = 2 * math.pi - angle

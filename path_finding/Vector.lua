@@ -126,9 +126,19 @@ function VectorMeta:getBasisAngle()
   return angle
 end
 
-function VectorMeta:__mul(alpha)
-  local result = VectorMeta:new(nil, self.n)
-  for i, v in ipairs(self._table) do
+function VectorMeta:__mul(other)
+  local alpha
+  local vector
+  if type(other) == "number" then
+    alpha = other
+    vector = self
+  else
+    alpha = self
+    vector = other
+  end
+
+  local result = VectorMeta:new(nil, vector.n)
+  for i, v in ipairs(vector._table) do
     result:set(i, v * alpha)
   end
   return result

@@ -15,7 +15,7 @@ function love.load()
   love.graphics.setDefaultFilter('nearest', 'nearest')
   love.window.setTitle("Path Finding")
   gNodeMap = NodeMap()
-  gSimulator = Simulator(gNodeMap, { numEntities = 1 })
+  gSimulator = Simulator(gNodeMap, { numEntities = 20 })
   hoveredNode = nil
 
   gContextMenu = ContextMenu { simulator = gSimulator }
