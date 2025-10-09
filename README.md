@@ -4,7 +4,7 @@ This repository collects small Love2D projects that explore gameplay and simulat
 
 ## Projects
 
-- `tactics_battle/`: Overhead tactical combat prototype with grid rendering, unit placement, and initiative-based turns.
+- `tactics_battle/`: Overhead tactical combat prototype with grid rendering, unit placement, initiative-based turns, and a turn-based battle system supporting movement ranges and melee/ranged attacks.
 - `homing_rocket/`: Demonstrates steering behaviour for a homing projectile.
 - `path_finding/`: Visualizes grid-based pathfinding with interactive menus.
 
@@ -12,7 +12,7 @@ This repository collects small Love2D projects that explore gameplay and simulat
 
 1. Install [Love2D](https://love2d.org/).
 2. From the repository root, run `love tactics_battle`.
-3. Use the arrow keys to move the cursor, press **Space** to select the active unit, **Enter** to move to the highlighted tile, and **Tab** to end the turn.
+3. Use the arrow keys to move the cursor, press **Space** to select the active unit, **Enter** to move to the highlighted tile, **A** to attack enemies in range, and **Tab** to end the turn.
 
 ## Development
 

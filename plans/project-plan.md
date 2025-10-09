@@ -11,3 +11,4 @@
 ## History
 
 - *2025-10-08*: Initialized tactical battle prototype plan and implemented foundational grid, unit, and turn systems.
+- *2025-10-08*: Implemented turn-based battle system with movement ranges, attacks, and unit elimination rules.

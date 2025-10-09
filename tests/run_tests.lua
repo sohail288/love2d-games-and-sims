@@ -59,6 +59,7 @@ _G.describe = describe
 local testFiles = {
     "tests.tactics_battle.test_grid",
     "tests.tactics_battle.test_battlefield",
+    "tests.tactics_battle.test_battle_system",
     "tests.tactics_battle.test_turn_manager"
 }
 
