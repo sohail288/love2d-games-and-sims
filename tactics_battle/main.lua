@@ -3,6 +3,7 @@ local Unit = require("tactics_battle.world.Unit")
 local Battlefield = require("tactics_battle.world.Battlefield")
 local TurnManager = require("tactics_battle.systems.TurnManager")
 local BattleSystem = require("tactics_battle.systems.BattleSystem")
+local EnemyAI = require("tactics_battle.systems.EnemyAI")
 local Cursor = require("tactics_battle.ui.Cursor")
 
 local state = {
@@ -15,8 +16,18 @@ local state = {
     moveTiles = nil,
     attackTargets = nil,
     battleOutcome = nil,
-    battleSystem = nil
+    battleSystem = nil,
+    enemyAI = nil,
+    turnOrder = nil
 }
+
+local function updateTurnOrder()
+    if not state.turnManager then
+        state.turnOrder = nil
+        return
+    end
+    state.turnOrder = state.turnManager:getTurnOrder()
+end
 
 local function refreshHighlights()
     if not state.selectedUnit or not state.battleSystem then
@@ -143,7 +154,53 @@ local function drawHud()
         end
         love.graphics.print(message, 16, 64)
     end
+    if state.turnOrder and #state.turnOrder > 0 and state.turnManager then
+        local labels = {}
+        local currentIndex = state.turnManager:getCurrentIndex()
+        for index, unit in ipairs(state.turnOrder) do
+            local marker = index == currentIndex and "*" or " "
+            labels[#labels + 1] = string.format("%s%s", marker, unit.name)
+        end
+        love.graphics.print("Turn Order: " .. table.concat(labels, " -> "), 16, 88)
+    end
     love.graphics.print("Controls: Arrows move cursor, Space select, Enter move, A attack, Tab end turn", 16, love.graphics.getHeight() - 32)
+end
+
+local function beginTurn(unit)
+    if not unit or not state.battleSystem or state.battleOutcome then
+        return
+    end
+
+    if state.battleSystem.currentUnit ~= unit then
+        state.battleSystem:startTurn(unit)
+    end
+
+    state.selectedUnit = nil
+    state.moveTiles = nil
+    state.attackTargets = nil
+
+    if state.cursor then
+        state.cursor:setPosition(unit.col, unit.row)
+    end
+
+    updateTurnOrder()
+
+    if unit.faction == "enemies" and state.enemyAI then
+        local actions = state.enemyAI:takeTurn(unit)
+        if actions.attacked or actions.moved then
+            refreshHighlights()
+        end
+        state.battleOutcome = state.battleSystem:checkBattleOutcome()
+        updateTurnOrder()
+        if not state.battleOutcome then
+            local nextUnit = state.battleSystem:endTurn()
+            state.battleOutcome = state.battleSystem:checkBattleOutcome()
+            updateTurnOrder()
+            if nextUnit then
+                beginTurn(nextUnit)
+            end
+        end
+    end
 end
 
 local function selectUnitAtCursor()
@@ -180,6 +237,7 @@ local function attackTargetAtCursor()
     state.battleSystem:attack(state.selectedUnit, target)
     refreshHighlights()
     state.battleOutcome = state.battleSystem:checkBattleOutcome()
+    updateTurnOrder()
 end
 
 local function endTurn()
@@ -189,10 +247,11 @@ local function endTurn()
     if not state.battleSystem then
         return
     end
-    local current = state.battleSystem:endTurn()
+    local nextUnit = state.battleSystem:endTurn()
     state.battleOutcome = state.battleSystem:checkBattleOutcome()
-    if current then
-        state.cursor:setPosition(current.col, current.row)
+    updateTurnOrder()
+    if nextUnit then
+        beginTurn(nextUnit)
     end
 end
 
@@ -203,11 +262,13 @@ function love.load()
     populateBattlefield(state.battlefield, units)
     state.turnManager = TurnManager.new(units)
     state.battleSystem = BattleSystem.new({ battlefield = state.battlefield, turnManager = state.turnManager })
+    state.enemyAI = EnemyAI.new({ battleSystem = state.battleSystem })
     local current = state.turnManager:currentUnit()
-    if current then
-        state.battleSystem:startTurn(current)
-    end
     state.cursor = Cursor.new(state.grid, current and current.col or 1, current and current.row or 1)
+    updateTurnOrder()
+    if current then
+        beginTurn(current)
+    end
     state.font = love.graphics.newFont(16)
     love.graphics.setBackgroundColor(0.08, 0.09, 0.12)
 end

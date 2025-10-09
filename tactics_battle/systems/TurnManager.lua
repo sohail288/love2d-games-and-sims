@@ -83,4 +83,16 @@ function TurnManager:unitCount()
     return #self.order
 end
 
+function TurnManager:getTurnOrder()
+    local snapshot = {}
+    for i, unit in ipairs(self.order) do
+        snapshot[i] = unit
+    end
+    return snapshot
+end
+
+function TurnManager:getCurrentIndex()
+    return self.index
+end
+
 return TurnManager

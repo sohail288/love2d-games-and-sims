@@ -15,6 +15,7 @@
 │   ├── main.lua
 │   ├── systems/
 │   │   ├── BattleSystem.lua
+│   │   ├── EnemyAI.lua
 │   │   └── TurnManager.lua
 │   ├── ui/
 │   │   └── Cursor.lua
@@ -27,6 +28,7 @@
     └── tactics_battle/
         ├── test_battlefield.lua
         ├── test_battle_system.lua
+        ├── test_enemy_ai.lua
         ├── test_grid.lua
         └── test_turn_manager.lua
 ```

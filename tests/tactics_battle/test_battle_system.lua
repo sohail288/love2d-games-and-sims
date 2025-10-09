@@ -10,7 +10,7 @@ describe("BattleSystem", function()
         local battlefield = Battlefield.new(grid)
         local units = {
             Unit.new({ id = "ally", faction = "allies", col = 2, row = 2, move = 3, attackPower = 30 }),
-            Unit.new({ id = "enemy", faction = "enemies", col = 4, row = 2, hp = 40 }),
+            Unit.new({ id = "enemy", faction = "enemies", col = 4, row = 2, hp = 30 }),
             Unit.new({ id = "blocker", faction = "allies", col = 3, row = 2 })
         }
         for _, unit in ipairs(units) do
@@ -65,6 +65,8 @@ describe("BattleSystem", function()
             local attacker = context.units[1]
             local target = context.units[2]
 
+            context.turnManager:removeUnit(context.units[3])
+            context.battlefield:removeUnit(context.units[3])
             context.battlefield:moveUnit(attacker, 3, 2)
             assertTrue(battleSystem:canAttack(attacker, target), "target should be in range")
             local result = battleSystem:attack(attacker, target)
@@ -74,6 +76,7 @@ describe("BattleSystem", function()
             assertTrue(context.battlefield:getUnitAt(4, 2) == nil, "target removed from battlefield")
             assertEquals(context.turnManager:unitCount(), 2)
             assertTrue(battleSystem:hasActed(), "attacker cannot act twice in same turn")
+            assertTrue(not battleSystem:canAttack(attacker, target), "attacker has already acted")
         end)
     end)
 
