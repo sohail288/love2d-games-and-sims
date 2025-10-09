@@ -59,7 +59,9 @@ _G.describe = describe
 local testFiles = {
     "tests.tactics_battle.test_grid",
     "tests.tactics_battle.test_battlefield",
-    "tests.tactics_battle.test_turn_manager"
+    "tests.tactics_battle.test_battle_system",
+    "tests.tactics_battle.test_turn_manager",
+    "tests.tactics_battle.test_enemy_ai"
 }
 
 local total = 0
@@ -72,7 +74,16 @@ end
 for _, suite in ipairs(suites) do
     for _, test in ipairs(suite.tests) do
         total = total + 1
+        local previousAssertEquals = _G.assertEquals
+        local previousAssertTrue = _G.assertTrue
+        _G.assertEquals = assertEquals
+        _G.assertTrue = assertTrue
+
         local ok, err = pcall(test.fn)
+
+        _G.assertEquals = previousAssertEquals
+        _G.assertTrue = previousAssertTrue
+
         if ok then
             passed = passed + 1
         else

@@ -2,6 +2,8 @@ local Grid = require("tactics_battle.world.Grid")
 local Unit = require("tactics_battle.world.Unit")
 local Battlefield = require("tactics_battle.world.Battlefield")
 local TurnManager = require("tactics_battle.systems.TurnManager")
+local BattleSystem = require("tactics_battle.systems.BattleSystem")
+local EnemyAI = require("tactics_battle.systems.EnemyAI")
 local Cursor = require("tactics_battle.ui.Cursor")
 
 local state = {
@@ -10,15 +12,95 @@ local state = {
     turnManager = nil,
     cursor = nil,
     selectedUnit = nil,
-    font = nil
+    font = nil,
+    moveTiles = nil,
+    attackTiles = nil,
+    battleOutcome = nil,
+    battleSystem = nil,
+    enemyAI = nil,
+    turnOrder = nil,
+    attackPreview = false
 }
+
+local function updateTurnOrder()
+    if not state.turnManager then
+        state.turnOrder = nil
+        return
+    end
+    state.turnOrder = state.turnManager:getTurnOrder()
+end
+
+local function clearAttackPreview()
+    state.attackPreview = false
+    state.attackTiles = nil
+end
+
+local function refreshAttackTiles()
+    if not state.selectedUnit or not state.battleSystem then
+        clearAttackPreview()
+        return
+    end
+
+    if state.battleSystem:hasActed() then
+        clearAttackPreview()
+        return
+    end
+
+    if state.attackPreview then
+        state.attackTiles = state.battleSystem:getAttackableTiles(state.selectedUnit)
+    else
+        state.attackTiles = nil
+    end
+end
+
+local function refreshHighlights()
+    if not state.selectedUnit or not state.battleSystem then
+        state.moveTiles = nil
+        clearAttackPreview()
+        return
+    end
+    if state.battleSystem:hasMoved() then
+        state.moveTiles = { { col = state.selectedUnit.col, row = state.selectedUnit.row } }
+    else
+        state.moveTiles = state.battleSystem:getReachableTiles(state.selectedUnit)
+    end
+    refreshAttackTiles()
+end
+
+local function ensureCurrentSelection()
+    if state.selectedUnit then
+        return state.selectedUnit
+    end
+
+    local current = state.turnManager and state.turnManager:currentUnit() or nil
+    if current then
+        state.selectedUnit = current
+        refreshHighlights()
+    end
+    return state.selectedUnit
+end
+
+local function enterAttackPreview()
+    local unit = ensureCurrentSelection()
+    if not unit or not state.battleSystem then
+        return nil
+    end
+
+    if state.battleSystem:hasActed() then
+        return nil
+    end
+
+    state.attackPreview = true
+    state.attackTiles = state.battleSystem:getAttackableTiles(unit)
+    return unit
+end
 
 local function createUnits()
     return {
-        Unit.new({ id = "ally_knight", name = "Knight", faction = "allies", speed = 8, hp = 120, col = 2, row = 5 }),
-        Unit.new({ id = "ally_archer", name = "Archer", faction = "allies", speed = 12, hp = 80, col = 3, row = 6 }),
-        Unit.new({ id = "enemy_soldier", name = "Soldier", faction = "enemies", speed = 7, hp = 100, col = 8, row = 3 }),
-        Unit.new({ id = "enemy_mage", name = "Mage", faction = "enemies", speed = 10, hp = 70, col = 7, row = 2 })
+        Unit.new({ id = "ally_knight", name = "Knight", faction = "allies", speed = 8, hp = 120, move = 3, attackPower = 35, col = 2, row = 5 }),
+        Unit.new({ id = "ally_archer", name = "Archer", faction = "allies", speed = 12, hp = 80, move = 4, attackRange = 3, attackPower = 28, col = 3, row = 6 }),
+        Unit.new({ id = "enemy_soldier", name = "Soldier", faction = "enemies", speed = 7, hp = 100, move = 3, attackPower = 32, col = 8, row = 3 }),
+        Unit.new({ id = "enemy_mage", name = "Mage", faction = "enemies", speed = 10, hp = 70, move = 4, attackRange = 3, attackPower = 40, col = 7, row = 2 })
     }
 end
 
@@ -46,6 +128,19 @@ local function drawGrid(grid)
         local x = offsetX + (tile.col - 1) * grid.tileSize
         local y = offsetY + (tile.row - 1) * grid.tileSize
         love.graphics.rectangle("line", x, y, grid.tileSize, grid.tileSize)
+    end
+end
+
+local function drawHighlightTiles(grid, tiles, color)
+    if not tiles then
+        return
+    end
+    local offsetX, offsetY = centerOffsets(grid)
+    love.graphics.setColor(color[1], color[2], color[3], color[4] or 0.4)
+    for _, tile in ipairs(tiles) do
+        local x = offsetX + (tile.col - 1) * grid.tileSize
+        local y = offsetY + (tile.row - 1) * grid.tileSize
+        love.graphics.rectangle("fill", x + 2, y + 2, grid.tileSize - 4, grid.tileSize - 4, 6, 6)
     end
 end
 
@@ -98,38 +193,118 @@ local function drawHud()
     else
         love.graphics.print("Selected: none", 16, 40)
     end
-    love.graphics.print("Controls: Arrow Keys move cursor, Space select, Enter move, Tab end turn", 16, love.graphics.getHeight() - 32)
+    if state.battleOutcome then
+        local message
+        if state.battleOutcome.draw then
+            message = "Battle complete: Draw"
+        else
+            message = string.format("Battle complete: %s win", state.battleOutcome.winner)
+        end
+        love.graphics.print(message, 16, 64)
+    end
+    if state.turnOrder and #state.turnOrder > 0 and state.turnManager then
+        local labels = {}
+        local currentIndex = state.turnManager:getCurrentIndex()
+        for index, unit in ipairs(state.turnOrder) do
+            local marker = index == currentIndex and "*" or " "
+            labels[#labels + 1] = string.format("%s%s", marker, unit.name)
+        end
+        love.graphics.print("Turn Order: " .. table.concat(labels, " -> "), 16, 88)
+    end
+    love.graphics.print("Controls: Arrows move cursor, Space select, Enter move, A attack, Tab end turn", 16, love.graphics.getHeight() - 32)
+end
+
+local function beginTurn(unit)
+    if not unit or not state.battleSystem or state.battleOutcome then
+        return
+    end
+
+    if state.battleSystem.currentUnit ~= unit then
+        state.battleSystem:startTurn(unit)
+    end
+
+    state.selectedUnit = nil
+    state.moveTiles = nil
+    clearAttackPreview()
+
+    if state.cursor then
+        state.cursor:setPosition(unit.col, unit.row)
+    end
+
+    updateTurnOrder()
+
+    if unit.faction == "enemies" and state.enemyAI then
+        local actions = state.enemyAI:takeTurn(unit)
+        if actions.attacked or actions.moved then
+            refreshHighlights()
+        end
+        state.battleOutcome = state.battleSystem:checkBattleOutcome()
+        updateTurnOrder()
+        if not state.battleOutcome then
+            local nextUnit = state.battleSystem:endTurn()
+            state.battleOutcome = state.battleSystem:checkBattleOutcome()
+            updateTurnOrder()
+            if nextUnit then
+                beginTurn(nextUnit)
+            end
+        end
+    end
 end
 
 local function selectUnitAtCursor()
     local unit = state.battlefield:getUnitAt(state.cursor.col, state.cursor.row)
     local current = state.turnManager:currentUnit()
     if unit and current and unit.id == current.id then
+        clearAttackPreview()
         state.selectedUnit = unit
+        refreshHighlights()
     end
 end
 
 local function moveSelectedUnit()
-    if not state.selectedUnit then
+    if not state.selectedUnit or not state.battleSystem then
         return
     end
-    if state.battlefield:getUnitAt(state.cursor.col, state.cursor.row) then
+    if not state.battleSystem:canMove(state.selectedUnit, state.cursor.col, state.cursor.row) then
         return
     end
-    state.battlefield:moveUnit(state.selectedUnit, state.cursor.col, state.cursor.row)
-    state.selectedUnit = nil
-    state.turnManager:advance()
-    local current = state.turnManager:currentUnit()
-    if current then
-        state.cursor:setPosition(current.col, current.row)
+    clearAttackPreview()
+    state.battleSystem:move(state.selectedUnit, state.cursor.col, state.cursor.row)
+    refreshHighlights()
+end
+
+local function attackTargetAtCursor()
+    local unit = enterAttackPreview()
+    if not unit then
+        return
     end
+
+    refreshAttackTiles()
+
+    local target = state.battlefield:getUnitAt(state.cursor.col, state.cursor.row)
+    if not target or not state.battleSystem:canAttack(unit, target) then
+        return
+    end
+
+    state.battleSystem:attack(unit, target)
+    clearAttackPreview()
+    refreshHighlights()
+    state.battleOutcome = state.battleSystem:checkBattleOutcome()
+    updateTurnOrder()
 end
 
 local function endTurn()
     state.selectedUnit = nil
-    local current = state.turnManager:advance()
-    if current then
-        state.cursor:setPosition(current.col, current.row)
+    state.moveTiles = nil
+    clearAttackPreview()
+    if not state.battleSystem then
+        return
+    end
+    local nextUnit = state.battleSystem:endTurn()
+    state.battleOutcome = state.battleSystem:checkBattleOutcome()
+    updateTurnOrder()
+    if nextUnit then
+        beginTurn(nextUnit)
     end
 end
 
@@ -139,8 +314,14 @@ function love.load()
     local units = createUnits()
     populateBattlefield(state.battlefield, units)
     state.turnManager = TurnManager.new(units)
+    state.battleSystem = BattleSystem.new({ battlefield = state.battlefield, turnManager = state.turnManager })
+    state.enemyAI = EnemyAI.new({ battleSystem = state.battleSystem })
     local current = state.turnManager:currentUnit()
     state.cursor = Cursor.new(state.grid, current and current.col or 1, current and current.row or 1)
+    updateTurnOrder()
+    if current then
+        beginTurn(current)
+    end
     state.font = love.graphics.newFont(16)
     love.graphics.setBackgroundColor(0.08, 0.09, 0.12)
 end
@@ -158,6 +339,8 @@ function love.keypressed(key)
         selectUnitAtCursor()
     elseif key == "return" or key == "kpenter" then
         moveSelectedUnit()
+    elseif key == "a" then
+        attackTargetAtCursor()
     elseif key == "tab" then
         endTurn()
     end
@@ -165,6 +348,8 @@ end
 
 function love.draw()
     drawGrid(state.grid)
+    drawHighlightTiles(state.grid, state.moveTiles, { 0.2, 0.5, 0.8, 0.25 })
+    drawHighlightTiles(state.grid, state.attackTiles, { 0.9, 0.3, 0.3, 0.25 })
     drawUnits(state.grid, state.battlefield, state.selectedUnit)
     drawCursor(state.grid, state.cursor)
     drawHud()
