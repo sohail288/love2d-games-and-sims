@@ -1,0 +1,172 @@
+local Grid = require("tactics_battle.world.Grid")
+local Unit = require("tactics_battle.world.Unit")
+local Battlefield = require("tactics_battle.world.Battlefield")
+local TurnManager = require("tactics_battle.systems.TurnManager")
+local Cursor = require("tactics_battle.ui.Cursor")
+
+local state = {
+    grid = nil,
+    battlefield = nil,
+    turnManager = nil,
+    cursor = nil,
+    selectedUnit = nil,
+    font = nil
+}
+
+local function createUnits()
+    return {
+        Unit.new({ id = "ally_knight", name = "Knight", faction = "allies", speed = 8, hp = 120, col = 2, row = 5 }),
+        Unit.new({ id = "ally_archer", name = "Archer", faction = "allies", speed = 12, hp = 80, col = 3, row = 6 }),
+        Unit.new({ id = "enemy_soldier", name = "Soldier", faction = "enemies", speed = 7, hp = 100, col = 8, row = 3 }),
+        Unit.new({ id = "enemy_mage", name = "Mage", faction = "enemies", speed = 10, hp = 70, col = 7, row = 2 })
+    }
+end
+
+local function populateBattlefield(battlefield, units)
+    for _, unit in ipairs(units) do
+        battlefield:addUnit(unit, unit.col, unit.row)
+    end
+end
+
+local function centerOffsets(grid)
+    local width = love.graphics.getWidth()
+    local height = love.graphics.getHeight()
+    local totalWidth = grid.width * grid.tileSize
+    local totalHeight = grid.height * grid.tileSize
+    local offsetX = (width - totalWidth) / 2
+    local offsetY = (height - totalHeight) / 2
+    return offsetX, offsetY
+end
+
+local function drawGrid(grid)
+    local offsetX, offsetY = centerOffsets(grid)
+    love.graphics.setLineWidth(1)
+    love.graphics.setColor(0.2, 0.25, 0.3)
+    for tile in grid:tiles() do
+        local x = offsetX + (tile.col - 1) * grid.tileSize
+        local y = offsetY + (tile.row - 1) * grid.tileSize
+        love.graphics.rectangle("line", x, y, grid.tileSize, grid.tileSize)
+    end
+end
+
+local function drawCursor(grid, cursor)
+    if not cursor then
+        return
+    end
+    local offsetX, offsetY = centerOffsets(grid)
+    local x = offsetX + (cursor.col - 1) * grid.tileSize
+    local y = offsetY + (cursor.row - 1) * grid.tileSize
+    love.graphics.setColor(1, 0.85, 0.3, 0.7)
+    love.graphics.rectangle("line", x + 2, y + 2, grid.tileSize - 4, grid.tileSize - 4)
+end
+
+local function unitColor(unit)
+    if unit.faction == "allies" then
+        return 0.3, 0.7, 0.9
+    else
+        return 0.9, 0.4, 0.4
+    end
+end
+
+local function drawUnits(grid, battlefield, selectedUnit)
+    local offsetX, offsetY = centerOffsets(grid)
+    for _, unit in ipairs(battlefield.units) do
+        local x = offsetX + (unit.col - 1) * grid.tileSize
+        local y = offsetY + (unit.row - 1) * grid.tileSize
+        local r, g, b = unitColor(unit)
+        love.graphics.setColor(r, g, b)
+        love.graphics.rectangle("fill", x + 6, y + 6, grid.tileSize - 12, grid.tileSize - 12, 6, 6)
+        if selectedUnit and selectedUnit.id == unit.id then
+            love.graphics.setColor(1, 1, 1)
+            love.graphics.setLineWidth(2)
+            love.graphics.rectangle("line", x + 4, y + 4, grid.tileSize - 8, grid.tileSize - 8, 6, 6)
+        end
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.print(unit.name, x + 8, y + grid.tileSize - 20)
+    end
+end
+
+local function drawHud()
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.setFont(state.font)
+    local current = state.turnManager:currentUnit()
+    if current then
+        love.graphics.print(string.format("Current Turn: %s (%s)", current.name, current.faction), 16, 16)
+    end
+    if state.selectedUnit then
+        love.graphics.print(string.format("Selected: %s | HP %d/%d", state.selectedUnit.name, state.selectedUnit.hp, state.selectedUnit.maxHp), 16, 40)
+    else
+        love.graphics.print("Selected: none", 16, 40)
+    end
+    love.graphics.print("Controls: Arrow Keys move cursor, Space select, Enter move, Tab end turn", 16, love.graphics.getHeight() - 32)
+end
+
+local function selectUnitAtCursor()
+    local unit = state.battlefield:getUnitAt(state.cursor.col, state.cursor.row)
+    local current = state.turnManager:currentUnit()
+    if unit and current and unit.id == current.id then
+        state.selectedUnit = unit
+    end
+end
+
+local function moveSelectedUnit()
+    if not state.selectedUnit then
+        return
+    end
+    if state.battlefield:getUnitAt(state.cursor.col, state.cursor.row) then
+        return
+    end
+    state.battlefield:moveUnit(state.selectedUnit, state.cursor.col, state.cursor.row)
+    state.selectedUnit = nil
+    state.turnManager:advance()
+    local current = state.turnManager:currentUnit()
+    if current then
+        state.cursor:setPosition(current.col, current.row)
+    end
+end
+
+local function endTurn()
+    state.selectedUnit = nil
+    local current = state.turnManager:advance()
+    if current then
+        state.cursor:setPosition(current.col, current.row)
+    end
+end
+
+function love.load()
+    state.grid = Grid.new(10, 8, 64)
+    state.battlefield = Battlefield.new(state.grid)
+    local units = createUnits()
+    populateBattlefield(state.battlefield, units)
+    state.turnManager = TurnManager.new(units)
+    local current = state.turnManager:currentUnit()
+    state.cursor = Cursor.new(state.grid, current and current.col or 1, current and current.row or 1)
+    state.font = love.graphics.newFont(16)
+    love.graphics.setBackgroundColor(0.08, 0.09, 0.12)
+end
+
+function love.keypressed(key)
+    if key == "up" then
+        state.cursor:move(0, -1)
+    elseif key == "down" then
+        state.cursor:move(0, 1)
+    elseif key == "left" then
+        state.cursor:move(-1, 0)
+    elseif key == "right" then
+        state.cursor:move(1, 0)
+    elseif key == "space" then
+        selectUnitAtCursor()
+    elseif key == "return" or key == "kpenter" then
+        moveSelectedUnit()
+    elseif key == "tab" then
+        endTurn()
+    end
+end
+
+function love.draw()
+    drawGrid(state.grid)
+    drawUnits(state.grid, state.battlefield, state.selectedUnit)
+    drawCursor(state.grid, state.cursor)
+    drawHud()
+end
+
