@@ -83,4 +83,12 @@ function TurnManager:unitCount()
     return #self.order
 end
 
+function TurnManager:getOrder()
+    local copy = {}
+    for index, unit in ipairs(self.order) do
+        copy[index] = unit
+    end
+    return copy
+end
+
 return TurnManager

@@ -16,12 +16,12 @@ Create a Final Fantasy Tactics-inspired overhead tactical combat prototype demon
 ### Phase 2: Interaction and Commands
 - Provide cursor selection and context-sensitive command prompts.
 - Implement movement preview and confirmation flows.
-- Resolve simple combat actions with hit point tracking.
+- Resolve simple combat actions with hit point tracking and unit removal.
 
 ### Phase 3: AI and Scenario Expansion
-- Add initiative-based AI turns with basic decision-making.
-- Script example scenarios with victory/defeat conditions.
-- Introduce varied terrain types affecting movement.
+- [x] Add initiative-based AI turns with basic decision-making.
+- [ ] Script example scenarios with victory/defeat conditions.
+- [ ] Introduce varied terrain types affecting movement.
 
 ## Acceptance Criteria
 
@@ -32,5 +32,5 @@ Create a Final Fantasy Tactics-inspired overhead tactical combat prototype demon
 ## Phase Completion Tracking
 
 - [x] Phase 1 tasks initiated with foundational grid, unit, and turn modules.
-- [ ] Phase 2 tasks implemented.
-- [ ] Phase 3 tasks implemented.
+- [x] Phase 2 tasks implemented with selectable units, movement ranges, and combat resolution.
+- [ ] Phase 3 tasks implemented (initiative-based AI complete, remaining scenario and terrain work pending).

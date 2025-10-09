@@ -2,6 +2,8 @@ local Grid = require("tactics_battle.world.Grid")
 local Unit = require("tactics_battle.world.Unit")
 local Battlefield = require("tactics_battle.world.Battlefield")
 local TurnManager = require("tactics_battle.systems.TurnManager")
+local BattleSystem = require("tactics_battle.systems.BattleSystem")
+local EnemyAI = require("tactics_battle.systems.EnemyAI")
 local Cursor = require("tactics_battle.ui.Cursor")
 
 local state = {
@@ -10,15 +12,47 @@ local state = {
     turnManager = nil,
     cursor = nil,
     selectedUnit = nil,
-    font = nil
+    font = nil,
+    moveTiles = nil,
+    attackTargets = nil,
+    battleOutcome = nil,
+    battleSystem = nil,
+    enemyAI = nil,
+    turnQueue = nil
 }
+
+local function refreshHighlights()
+    if not state.selectedUnit or not state.battleSystem then
+        state.moveTiles = nil
+        state.attackTargets = nil
+        return
+    end
+    if state.battleSystem:hasMoved() then
+        state.moveTiles = { { col = state.selectedUnit.col, row = state.selectedUnit.row } }
+    else
+        state.moveTiles = state.battleSystem:getReachableTiles(state.selectedUnit)
+    end
+    if state.battleSystem:hasActed() then
+        state.attackTargets = {}
+    else
+        state.attackTargets = state.battleSystem:getAttackableTargets(state.selectedUnit)
+    end
+end
+
+local function refreshTurnQueue()
+    if not state.turnManager then
+        state.turnQueue = {}
+        return
+    end
+    state.turnQueue = state.turnManager:getOrder()
+end
 
 local function createUnits()
     return {
-        Unit.new({ id = "ally_knight", name = "Knight", faction = "allies", speed = 8, hp = 120, col = 2, row = 5 }),
-        Unit.new({ id = "ally_archer", name = "Archer", faction = "allies", speed = 12, hp = 80, col = 3, row = 6 }),
-        Unit.new({ id = "enemy_soldier", name = "Soldier", faction = "enemies", speed = 7, hp = 100, col = 8, row = 3 }),
-        Unit.new({ id = "enemy_mage", name = "Mage", faction = "enemies", speed = 10, hp = 70, col = 7, row = 2 })
+        Unit.new({ id = "ally_knight", name = "Knight", faction = "allies", speed = 8, hp = 120, move = 3, attackPower = 35, col = 2, row = 5 }),
+        Unit.new({ id = "ally_archer", name = "Archer", faction = "allies", speed = 12, hp = 80, move = 4, attackRange = 3, attackPower = 28, col = 3, row = 6 }),
+        Unit.new({ id = "enemy_soldier", name = "Soldier", faction = "enemies", speed = 7, hp = 100, move = 3, attackPower = 32, col = 8, row = 3 }),
+        Unit.new({ id = "enemy_mage", name = "Mage", faction = "enemies", speed = 10, hp = 70, move = 4, attackRange = 3, attackPower = 40, col = 7, row = 2 })
     }
 end
 
@@ -46,6 +80,19 @@ local function drawGrid(grid)
         local x = offsetX + (tile.col - 1) * grid.tileSize
         local y = offsetY + (tile.row - 1) * grid.tileSize
         love.graphics.rectangle("line", x, y, grid.tileSize, grid.tileSize)
+    end
+end
+
+local function drawHighlightTiles(grid, tiles, color)
+    if not tiles then
+        return
+    end
+    local offsetX, offsetY = centerOffsets(grid)
+    love.graphics.setColor(color[1], color[2], color[3], color[4] or 0.4)
+    for _, tile in ipairs(tiles) do
+        local x = offsetX + (tile.col - 1) * grid.tileSize
+        local y = offsetY + (tile.row - 1) * grid.tileSize
+        love.graphics.rectangle("fill", x + 2, y + 2, grid.tileSize - 4, grid.tileSize - 4, 6, 6)
     end
 end
 
@@ -98,7 +145,28 @@ local function drawHud()
     else
         love.graphics.print("Selected: none", 16, 40)
     end
-    love.graphics.print("Controls: Arrow Keys move cursor, Space select, Enter move, Tab end turn", 16, love.graphics.getHeight() - 32)
+    if state.battleOutcome then
+        local message
+        if state.battleOutcome.draw then
+            message = "Battle complete: Draw"
+        else
+            message = string.format("Battle complete: %s win", state.battleOutcome.winner)
+        end
+        love.graphics.print(message, 16, 64)
+    end
+    if state.turnQueue and #state.turnQueue > 0 then
+        local labels = {}
+        local current = state.turnManager:currentUnit()
+        for _, unit in ipairs(state.turnQueue) do
+            local name = unit.name
+            if current and current.id == unit.id then
+                name = string.format("[%s]", name)
+            end
+            table.insert(labels, name)
+        end
+        love.graphics.print("Turn Order: " .. table.concat(labels, " -> "), 16, 88)
+    end
+    love.graphics.print("Controls: Arrows move cursor, Space select, Enter move, A attack, Tab end turn", 16, love.graphics.getHeight() - 32)
 end
 
 local function selectUnitAtCursor()
@@ -106,43 +174,98 @@ local function selectUnitAtCursor()
     local current = state.turnManager:currentUnit()
     if unit and current and unit.id == current.id then
         state.selectedUnit = unit
+        refreshHighlights()
     end
 end
 
 local function moveSelectedUnit()
-    if not state.selectedUnit then
+    if not state.selectedUnit or not state.battleSystem then
         return
     end
-    if state.battlefield:getUnitAt(state.cursor.col, state.cursor.row) then
+    if not state.battleSystem:canMove(state.selectedUnit, state.cursor.col, state.cursor.row) then
         return
     end
-    state.battlefield:moveUnit(state.selectedUnit, state.cursor.col, state.cursor.row)
-    state.selectedUnit = nil
-    state.turnManager:advance()
-    local current = state.turnManager:currentUnit()
-    if current then
-        state.cursor:setPosition(current.col, current.row)
+    state.battleSystem:move(state.selectedUnit, state.cursor.col, state.cursor.row)
+    refreshHighlights()
+end
+
+local function attackTargetAtCursor()
+    if not state.selectedUnit or not state.battleSystem then
+        return
     end
+    local target = state.battlefield:getUnitAt(state.cursor.col, state.cursor.row)
+    if not target then
+        return
+    end
+    if not state.battleSystem:canAttack(state.selectedUnit, target) then
+        return
+    end
+    state.battleSystem:attack(state.selectedUnit, target)
+    refreshHighlights()
+    state.battleOutcome = state.battleSystem:checkBattleOutcome()
+    refreshTurnQueue()
+end
+
+local function handleCurrentTurn(unit)
+    if not unit or state.battleOutcome then
+        return
+    end
+
+    if unit.faction == "enemies" and state.enemyAI then
+        state.selectedUnit = nil
+        refreshHighlights()
+        state.enemyAI:takeTurn(unit)
+        state.battleOutcome = state.battleSystem:checkBattleOutcome()
+        refreshTurnQueue()
+        if state.battleOutcome then
+            return
+        end
+        local nextUnit = state.battleSystem:endTurn()
+        state.battleOutcome = state.battleSystem:checkBattleOutcome()
+        refreshTurnQueue()
+        if nextUnit then
+            handleCurrentTurn(nextUnit)
+        end
+        return
+    end
+
+    state.selectedUnit = unit
+    state.cursor:setPosition(unit.col, unit.row)
+    refreshHighlights()
 end
 
 local function endTurn()
     state.selectedUnit = nil
-    local current = state.turnManager:advance()
+    state.moveTiles = nil
+    state.attackTargets = nil
+    if not state.battleSystem then
+        return
+    end
+    local current = state.battleSystem:endTurn()
+    state.battleOutcome = state.battleSystem:checkBattleOutcome()
+    refreshTurnQueue()
     if current then
-        state.cursor:setPosition(current.col, current.row)
+        handleCurrentTurn(current)
     end
 end
-
 function love.load()
     state.grid = Grid.new(10, 8, 64)
     state.battlefield = Battlefield.new(state.grid)
     local units = createUnits()
     populateBattlefield(state.battlefield, units)
     state.turnManager = TurnManager.new(units)
+    state.battleSystem = BattleSystem.new({ battlefield = state.battlefield, turnManager = state.turnManager })
+    state.enemyAI = EnemyAI.new(state.battleSystem)
     local current = state.turnManager:currentUnit()
     state.cursor = Cursor.new(state.grid, current and current.col or 1, current and current.row or 1)
     state.font = love.graphics.newFont(16)
     love.graphics.setBackgroundColor(0.08, 0.09, 0.12)
+    refreshTurnQueue()
+    if current then
+        state.battleSystem:startTurn(current)
+        refreshTurnQueue()
+        handleCurrentTurn(current)
+    end
 end
 
 function love.keypressed(key)
@@ -158,6 +281,8 @@ function love.keypressed(key)
         selectUnitAtCursor()
     elseif key == "return" or key == "kpenter" then
         moveSelectedUnit()
+    elseif key == "a" then
+        attackTargetAtCursor()
     elseif key == "tab" then
         endTurn()
     end
@@ -165,6 +290,8 @@ end
 
 function love.draw()
     drawGrid(state.grid)
+    drawHighlightTiles(state.grid, state.moveTiles, { 0.2, 0.5, 0.8, 0.25 })
+    drawHighlightTiles(state.grid, state.attackTargets, { 0.9, 0.3, 0.3, 0.25 })
     drawUnits(state.grid, state.battlefield, state.selectedUnit)
     drawCursor(state.grid, state.cursor)
     drawHud()

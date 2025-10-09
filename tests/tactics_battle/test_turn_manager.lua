@@ -28,4 +28,18 @@ describe("TurnManager", function()
         assertEquals(manager:unitCount(), 1)
         assertEquals(manager:currentUnit().id, "a")
     end)
+
+    it("provides a snapshot of the speed-sorted order", function()
+        local slow = Unit.new({ id = "slow", speed = 4 })
+        local fast = Unit.new({ id = "fast", speed = 9 })
+        local manager = TurnManager.new({ slow, fast })
+
+        local order = manager:getOrder()
+        assertEquals(#order, 2)
+        assertEquals(order[1].id, "fast")
+
+        order[1] = nil
+        local freshOrder = manager:getOrder()
+        assertEquals(freshOrder[1].id, "fast")
+    end)
 end)

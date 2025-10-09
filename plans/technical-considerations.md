@@ -9,3 +9,10 @@
 
 ## Rendering Constraints
 - Battlefield rendering relies on Love2D's immediate mode drawing; separation of concerns keeps drawing isolated from game state logic.
+
+## Tactical Battle Mechanics
+- BattleSystem module centralizes rules for movement, actions, and outcome evaluation to enable deterministic unit tests.
+- Movement range is computed with a breadth-first search over the grid while treating occupied tiles as obstacles.
+- Combat resolution removes defeated units from both the battlefield and initiative order to maintain consistent turn flow.
+- Enemy AI prioritizes low-health targets, attempts to shorten Manhattan distance to foes before attacking, and hands control back to the player automatically once actions are complete.
+- The HUD pulls a snapshot of the turn manager's initiative queue so players can plan around the upcoming sequence of turns.
