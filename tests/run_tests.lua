@@ -74,7 +74,16 @@ end
 for _, suite in ipairs(suites) do
     for _, test in ipairs(suite.tests) do
         total = total + 1
+        local previousAssertEquals = _G.assertEquals
+        local previousAssertTrue = _G.assertTrue
+        _G.assertEquals = assertEquals
+        _G.assertTrue = assertTrue
+
         local ok, err = pcall(test.fn)
+
+        _G.assertEquals = previousAssertEquals
+        _G.assertTrue = previousAssertTrue
+
         if ok then
             passed = passed + 1
         else

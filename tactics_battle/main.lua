@@ -14,11 +14,12 @@ local state = {
     selectedUnit = nil,
     font = nil,
     moveTiles = nil,
-    attackTargets = nil,
+    attackTiles = nil,
     battleOutcome = nil,
     battleSystem = nil,
     enemyAI = nil,
-    turnOrder = nil
+    turnOrder = nil,
+    attackPreview = false
 }
 
 local function updateTurnOrder()
@@ -29,10 +30,33 @@ local function updateTurnOrder()
     state.turnOrder = state.turnManager:getTurnOrder()
 end
 
+local function clearAttackPreview()
+    state.attackPreview = false
+    state.attackTiles = nil
+end
+
+local function refreshAttackTiles()
+    if not state.selectedUnit or not state.battleSystem then
+        clearAttackPreview()
+        return
+    end
+
+    if state.battleSystem:hasActed() then
+        clearAttackPreview()
+        return
+    end
+
+    if state.attackPreview then
+        state.attackTiles = state.battleSystem:getAttackableTiles(state.selectedUnit)
+    else
+        state.attackTiles = nil
+    end
+end
+
 local function refreshHighlights()
     if not state.selectedUnit or not state.battleSystem then
         state.moveTiles = nil
-        state.attackTargets = nil
+        clearAttackPreview()
         return
     end
     if state.battleSystem:hasMoved() then
@@ -40,11 +64,35 @@ local function refreshHighlights()
     else
         state.moveTiles = state.battleSystem:getReachableTiles(state.selectedUnit)
     end
-    if state.battleSystem:hasActed() then
-        state.attackTargets = {}
-    else
-        state.attackTargets = state.battleSystem:getAttackableTargets(state.selectedUnit)
+    refreshAttackTiles()
+end
+
+local function ensureCurrentSelection()
+    if state.selectedUnit then
+        return state.selectedUnit
     end
+
+    local current = state.turnManager and state.turnManager:currentUnit() or nil
+    if current then
+        state.selectedUnit = current
+        refreshHighlights()
+    end
+    return state.selectedUnit
+end
+
+local function enterAttackPreview()
+    local unit = ensureCurrentSelection()
+    if not unit or not state.battleSystem then
+        return nil
+    end
+
+    if state.battleSystem:hasActed() then
+        return nil
+    end
+
+    state.attackPreview = true
+    state.attackTiles = state.battleSystem:getAttackableTiles(unit)
+    return unit
 end
 
 local function createUnits()
@@ -177,7 +225,7 @@ local function beginTurn(unit)
 
     state.selectedUnit = nil
     state.moveTiles = nil
-    state.attackTargets = nil
+    clearAttackPreview()
 
     if state.cursor then
         state.cursor:setPosition(unit.col, unit.row)
@@ -207,6 +255,7 @@ local function selectUnitAtCursor()
     local unit = state.battlefield:getUnitAt(state.cursor.col, state.cursor.row)
     local current = state.turnManager:currentUnit()
     if unit and current and unit.id == current.id then
+        clearAttackPreview()
         state.selectedUnit = unit
         refreshHighlights()
     end
@@ -219,22 +268,26 @@ local function moveSelectedUnit()
     if not state.battleSystem:canMove(state.selectedUnit, state.cursor.col, state.cursor.row) then
         return
     end
+    clearAttackPreview()
     state.battleSystem:move(state.selectedUnit, state.cursor.col, state.cursor.row)
     refreshHighlights()
 end
 
 local function attackTargetAtCursor()
-    if not state.selectedUnit or not state.battleSystem then
+    local unit = enterAttackPreview()
+    if not unit then
         return
     end
+
+    refreshAttackTiles()
+
     local target = state.battlefield:getUnitAt(state.cursor.col, state.cursor.row)
-    if not target then
+    if not target or not state.battleSystem:canAttack(unit, target) then
         return
     end
-    if not state.battleSystem:canAttack(state.selectedUnit, target) then
-        return
-    end
-    state.battleSystem:attack(state.selectedUnit, target)
+
+    state.battleSystem:attack(unit, target)
+    clearAttackPreview()
     refreshHighlights()
     state.battleOutcome = state.battleSystem:checkBattleOutcome()
     updateTurnOrder()
@@ -243,7 +296,7 @@ end
 local function endTurn()
     state.selectedUnit = nil
     state.moveTiles = nil
-    state.attackTargets = nil
+    clearAttackPreview()
     if not state.battleSystem then
         return
     end
@@ -296,7 +349,7 @@ end
 function love.draw()
     drawGrid(state.grid)
     drawHighlightTiles(state.grid, state.moveTiles, { 0.2, 0.5, 0.8, 0.25 })
-    drawHighlightTiles(state.grid, state.attackTargets, { 0.9, 0.3, 0.3, 0.25 })
+    drawHighlightTiles(state.grid, state.attackTiles, { 0.9, 0.3, 0.3, 0.25 })
     drawUnits(state.grid, state.battlefield, state.selectedUnit)
     drawCursor(state.grid, state.cursor)
     drawHud()

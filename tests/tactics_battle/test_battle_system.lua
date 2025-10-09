@@ -9,9 +9,9 @@ describe("BattleSystem", function()
         local grid = Grid.new(6, 6, 32)
         local battlefield = Battlefield.new(grid)
         local units = {
-            Unit.new({ id = "ally", faction = "allies", col = 2, row = 2, move = 3, attackPower = 30 }),
-            Unit.new({ id = "enemy", faction = "enemies", col = 4, row = 2, hp = 30 }),
-            Unit.new({ id = "blocker", faction = "allies", col = 3, row = 2 })
+            Unit.new({ id = "ally", faction = "allies", col = 2, row = 2, move = 3, attackPower = 30, speed = 6 }),
+            Unit.new({ id = "enemy", faction = "enemies", col = 4, row = 2, hp = 30, speed = 5 }),
+            Unit.new({ id = "blocker", faction = "allies", col = 3, row = 2, speed = 4 })
         }
         for _, unit in ipairs(units) do
             battlefield:addUnit(unit, unit.col, unit.row)
@@ -74,9 +74,38 @@ describe("BattleSystem", function()
             assertEquals(result.damage, attacker.attackPower)
             assertTrue(result.defeated, "target should be defeated")
             assertTrue(context.battlefield:getUnitAt(4, 2) == nil, "target removed from battlefield")
-            assertEquals(context.turnManager:unitCount(), 2)
+            assertEquals(context.turnManager:unitCount(), 1)
             assertTrue(battleSystem:hasActed(), "attacker cannot act twice in same turn")
             assertTrue(not battleSystem:canAttack(attacker, target), "attacker has already acted")
+        end)
+
+        it("returns all tiles within attack range including empty squares", function()
+            local context = setupBattle()
+            local battleSystem = context.battleSystem
+            local attacker = context.units[1]
+
+            context.battlefield:moveUnit(attacker, 3, 3)
+
+            local tiles = battleSystem:getAttackableTiles(attacker)
+            table.sort(tiles, function(a, b)
+                if a.col == b.col then
+                    return a.row < b.row
+                end
+                return a.col < b.col
+            end)
+
+            local expected = {
+                { col = 2, row = 3 },
+                { col = 3, row = 2 },
+                { col = 3, row = 4 },
+                { col = 4, row = 3 }
+            }
+
+            assertEquals(#tiles, #expected)
+            for index, tile in ipairs(expected) do
+                assertEquals(tiles[index].col, tile.col)
+                assertEquals(tiles[index].row, tile.row)
+            end
         end)
     end)
 

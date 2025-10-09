@@ -36,7 +36,6 @@ end
 describe("EnemyAI", function()
     it("attacks in place when a target is already in range", function()
         local context = setupScenario({ enemyCol = 3, attackPower = 18 })
-        context.battlefield:moveUnit(context.enemy, 3, 3)
         assertTrue(context.battleSystem:canAttack(context.enemy, context.ally), "enemy should be able to attack without moving")
         local result = context.ai:takeTurn(context.enemy)
         assertTrue(result.attacked, "enemy should attack the adjacent ally")

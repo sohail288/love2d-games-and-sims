@@ -133,6 +133,30 @@ function BattleSystem:getAttackableTargets(attacker)
     return targets
 end
 
+function BattleSystem:getAttackableTiles(attacker)
+    assert(attacker, "attacker required")
+    local range = attacker.attackRange or 1
+    local tiles = {}
+    local seen = {}
+    for dx = -range, range do
+        for dy = -range, range do
+            local col = attacker.col + dx
+            local row = attacker.row + dy
+            if self.battlefield.grid:isWithinBounds(col, row) then
+                local distance = math.abs(dx) + math.abs(dy)
+                if distance > 0 and distance <= range then
+                    local key = tileKey(col, row)
+                    if not seen[key] then
+                        seen[key] = true
+                        tiles[#tiles + 1] = { col = col, row = row }
+                    end
+                end
+            end
+        end
+    end
+    return tiles
+end
+
 function BattleSystem:canAttack(attacker, target)
     if self.acted then
         return false
