@@ -5,6 +5,7 @@ local TurnManager = require("tactics_battle.systems.TurnManager")
 local BattleSystem = require("tactics_battle.systems.BattleSystem")
 local EnemyAI = require("tactics_battle.systems.EnemyAI")
 local Cursor = require("tactics_battle.ui.Cursor")
+local Scenarios = require("tactics_battle.scenarios.init")
 
 local state = {
     grid = nil,
@@ -19,7 +20,11 @@ local state = {
     battleSystem = nil,
     enemyAI = nil,
     turnOrder = nil,
-    attackPreview = false
+    attackPreview = false,
+    scenario = nil,
+    scenarioState = nil,
+    objectives = nil,
+    objectiveLookup = nil
 }
 
 local function updateTurnOrder()
@@ -67,6 +72,225 @@ local function refreshHighlights()
     refreshAttackTiles()
 end
 
+local function createScenarioContext(extras)
+    local context = {}
+    if extras then
+        for key, value in pairs(extras) do
+            context[key] = value
+        end
+    end
+    context.battleSystem = state.battleSystem
+    context.battlefield = state.battlefield
+    context.turnManager = state.turnManager
+    context.scenario = state.scenario
+    context.scenarioState = state.scenarioState
+    context.objectives = state.objectives
+
+    function context:countFactionUnits(faction)
+        local count = 0
+        if not state.battlefield then
+            return count
+        end
+        for _, unit in ipairs(state.battlefield.units or {}) do
+            if unit.faction == faction then
+                count = count + 1
+            end
+        end
+        return count
+    end
+
+    function context:listObjectives(filterType)
+        local results = {}
+        for _, objective in ipairs(state.objectives or {}) do
+            if not filterType or objective.type == filterType then
+                results[#results + 1] = objective
+            end
+        end
+        return results
+    end
+
+    return context
+end
+
+local function triggerScenarioHook(hookName, extras)
+    if not state.scenario or not state.scenario.hooks then
+        return
+    end
+    local hook = state.scenario.hooks[hookName]
+    if hook then
+        hook(createScenarioContext(extras))
+    end
+end
+
+local function initializeObjectives(scenario)
+    state.objectives = {}
+    state.objectiveLookup = {}
+    if not scenario or not scenario.objectives then
+        return
+    end
+    for _, definition in ipairs(scenario.objectives) do
+        local entry = {
+            id = definition.id,
+            type = definition.type or "primary",
+            description = definition.description or "",
+            status = definition.initialStatus,
+            details = definition.initialDetails,
+            evaluate = definition.evaluate
+        }
+        state.objectives[#state.objectives + 1] = entry
+        if entry.id then
+            state.objectiveLookup[entry.id] = entry
+        end
+    end
+end
+
+local function updateObjectives(outcome)
+    if not state.objectives then
+        return
+    end
+
+    local changed = false
+    local context = createScenarioContext({ outcome = outcome })
+
+    for _, objective in ipairs(state.objectives) do
+        if objective.evaluate then
+            local status, details = objective.evaluate(context)
+            if status and status ~= objective.status then
+                objective.status = status
+                changed = true
+            end
+            if details ~= objective.details then
+                objective.details = details
+                changed = true
+            end
+        end
+    end
+
+    if changed then
+        triggerScenarioHook("onObjectivesUpdated", { outcome = outcome })
+    end
+end
+
+local function evaluateBattleState()
+    if not state.battleSystem then
+        return
+    end
+    local outcome = state.battleSystem:checkBattleOutcome()
+    state.battleOutcome = outcome
+    updateObjectives(outcome)
+end
+
+local function instantiateScenarioUnits(scenario)
+    local units = {}
+    if not scenario or not scenario.units then
+        return units
+    end
+    for index, unitDefinition in ipairs(scenario.units) do
+        units[index] = Unit.new(unitDefinition)
+    end
+    return units
+end
+
+local function formatObjectiveStatus(status)
+    if not status or status == "" then
+        return "In progress"
+    end
+    local label = status:gsub("_", " ")
+    return label:sub(1, 1):upper() .. label:sub(2)
+end
+
+local function beginTurn(unit)
+    if not unit or not state.battleSystem or state.battleOutcome then
+        return
+    end
+
+    if state.battleSystem.currentUnit ~= unit then
+        state.battleSystem:startTurn(unit)
+    end
+
+    state.selectedUnit = nil
+    state.moveTiles = nil
+    clearAttackPreview()
+
+    if state.cursor then
+        state.cursor:setPosition(unit.col, unit.row)
+    end
+
+    updateTurnOrder()
+    triggerScenarioHook("onTurnStart", { unit = unit })
+
+    if unit.faction == "enemies" and state.enemyAI then
+        local actions = state.enemyAI:takeTurn(unit)
+        if actions.attacked or actions.moved then
+            refreshHighlights()
+        end
+        evaluateBattleState()
+        updateTurnOrder()
+        if not state.battleOutcome then
+            local nextUnit = state.battleSystem:endTurn()
+            evaluateBattleState()
+            updateTurnOrder()
+            if nextUnit then
+                beginTurn(nextUnit)
+            end
+        end
+    end
+end
+
+local function initializeScenario(scenario)
+    state.scenario = scenario
+    if scenario and scenario.createState then
+        state.scenarioState = scenario.createState()
+    else
+        state.scenarioState = {}
+    end
+
+    state.selectedUnit = nil
+    state.moveTiles = nil
+    state.attackTiles = nil
+    state.battleOutcome = nil
+    state.turnOrder = nil
+    state.attackPreview = false
+
+    if not scenario or not scenario.grid then
+        return
+    end
+
+    state.grid = Grid.new(scenario.grid.width, scenario.grid.height, scenario.grid.tileSize)
+    state.battlefield = Battlefield.new(state.grid)
+
+    local units = instantiateScenarioUnits(scenario)
+    local alliedCount = 0
+    for _, unit in ipairs(units) do
+        if unit.faction == "allies" then
+            alliedCount = alliedCount + 1
+        end
+        state.battlefield:addUnit(unit, unit.col, unit.row)
+    end
+
+    state.scenarioState.initialAllies = alliedCount
+
+    state.turnManager = TurnManager.new(units)
+    state.battleSystem = BattleSystem.new({
+        battlefield = state.battlefield,
+        turnManager = state.turnManager,
+        scenario = scenario,
+        scenarioState = state.scenarioState
+    })
+    state.enemyAI = EnemyAI.new({ battleSystem = state.battleSystem })
+
+    initializeObjectives(scenario)
+    updateObjectives(nil)
+
+    local current = state.turnManager:currentUnit()
+    state.cursor = Cursor.new(state.grid, current and current.col or 1, current and current.row or 1)
+    updateTurnOrder()
+
+    if current then
+        beginTurn(current)
+    end
+end
+
 local function ensureCurrentSelection()
     if state.selectedUnit then
         return state.selectedUnit
@@ -93,21 +317,6 @@ local function enterAttackPreview()
     state.attackPreview = true
     state.attackTiles = state.battleSystem:getAttackableTiles(unit)
     return unit
-end
-
-local function createUnits()
-    return {
-        Unit.new({ id = "ally_knight", name = "Knight", faction = "allies", speed = 8, hp = 120, move = 3, attackPower = 35, col = 2, row = 5 }),
-        Unit.new({ id = "ally_archer", name = "Archer", faction = "allies", speed = 12, hp = 80, move = 4, attackRange = 3, attackPower = 28, col = 3, row = 6 }),
-        Unit.new({ id = "enemy_soldier", name = "Soldier", faction = "enemies", speed = 7, hp = 100, move = 3, attackPower = 32, col = 8, row = 3 }),
-        Unit.new({ id = "enemy_mage", name = "Mage", faction = "enemies", speed = 10, hp = 70, move = 4, attackRange = 3, attackPower = 40, col = 7, row = 2 })
-    }
-end
-
-local function populateBattlefield(battlefield, units)
-    for _, unit in ipairs(units) do
-        battlefield:addUnit(unit, unit.col, unit.row)
-    end
 end
 
 local function centerOffsets(grid)
@@ -184,15 +393,46 @@ end
 local function drawHud()
     love.graphics.setColor(1, 1, 1)
     love.graphics.setFont(state.font)
-    local current = state.turnManager:currentUnit()
+    local y = 16
+
+    if state.scenario then
+        love.graphics.print(string.format("Scenario: %s", state.scenario.name or state.scenario.id), 16, y)
+        y = y + 24
+        if state.scenario.description then
+            love.graphics.print(state.scenario.description, 16, y)
+            y = y + 24
+        end
+    end
+
+    local current = state.turnManager and state.turnManager:currentUnit() or nil
     if current then
-        love.graphics.print(string.format("Current Turn: %s (%s)", current.name, current.faction), 16, 16)
-    end
-    if state.selectedUnit then
-        love.graphics.print(string.format("Selected: %s | HP %d/%d", state.selectedUnit.name, state.selectedUnit.hp, state.selectedUnit.maxHp), 16, 40)
+        love.graphics.print(string.format("Current Turn: %s (%s)", current.name, current.faction), 16, y)
     else
-        love.graphics.print("Selected: none", 16, 40)
+        love.graphics.print("Current Turn: none", 16, y)
     end
+    y = y + 24
+
+    if state.selectedUnit then
+        love.graphics.print(string.format("Selected: %s | HP %d/%d", state.selectedUnit.name, state.selectedUnit.hp, state.selectedUnit.maxHp), 16, y)
+    else
+        love.graphics.print("Selected: none", 16, y)
+    end
+    y = y + 24
+
+    if state.objectives and #state.objectives > 0 then
+        love.graphics.print("Objectives:", 16, y)
+        y = y + 20
+        for _, objective in ipairs(state.objectives) do
+            local statusLabel = formatObjectiveStatus(objective.status)
+            love.graphics.print(string.format("- [%s] %s", statusLabel, objective.description), 24, y)
+            y = y + 20
+            if objective.details and objective.details ~= "" then
+                love.graphics.print(string.format("  %s", objective.details), 32, y)
+                y = y + 18
+            end
+        end
+    end
+
     if state.battleOutcome then
         local message
         if state.battleOutcome.draw then
@@ -200,8 +440,14 @@ local function drawHud()
         else
             message = string.format("Battle complete: %s win", state.battleOutcome.winner)
         end
-        love.graphics.print(message, 16, 64)
+        love.graphics.print(message, 16, y)
+        y = y + 24
+        if state.battleOutcome.reason and state.battleOutcome.reason ~= "" then
+            love.graphics.print("Reason: " .. state.battleOutcome.reason, 16, y)
+            y = y + 24
+        end
     end
+
     if state.turnOrder and #state.turnOrder > 0 and state.turnManager then
         local labels = {}
         local currentIndex = state.turnManager:getCurrentIndex()
@@ -209,47 +455,12 @@ local function drawHud()
             local marker = index == currentIndex and "*" or " "
             labels[#labels + 1] = string.format("%s%s", marker, unit.name)
         end
-        love.graphics.print("Turn Order: " .. table.concat(labels, " -> "), 16, 88)
+        love.graphics.print("Turn Order: " .. table.concat(labels, " -> "), 16, y)
     end
+
     love.graphics.print("Controls: Arrows move cursor, Space select, Enter move, A attack, Tab end turn", 16, love.graphics.getHeight() - 32)
 end
 
-local function beginTurn(unit)
-    if not unit or not state.battleSystem or state.battleOutcome then
-        return
-    end
-
-    if state.battleSystem.currentUnit ~= unit then
-        state.battleSystem:startTurn(unit)
-    end
-
-    state.selectedUnit = nil
-    state.moveTiles = nil
-    clearAttackPreview()
-
-    if state.cursor then
-        state.cursor:setPosition(unit.col, unit.row)
-    end
-
-    updateTurnOrder()
-
-    if unit.faction == "enemies" and state.enemyAI then
-        local actions = state.enemyAI:takeTurn(unit)
-        if actions.attacked or actions.moved then
-            refreshHighlights()
-        end
-        state.battleOutcome = state.battleSystem:checkBattleOutcome()
-        updateTurnOrder()
-        if not state.battleOutcome then
-            local nextUnit = state.battleSystem:endTurn()
-            state.battleOutcome = state.battleSystem:checkBattleOutcome()
-            updateTurnOrder()
-            if nextUnit then
-                beginTurn(nextUnit)
-            end
-        end
-    end
-end
 
 local function selectUnitAtCursor()
     local unit = state.battlefield:getUnitAt(state.cursor.col, state.cursor.row)
@@ -289,7 +500,7 @@ local function attackTargetAtCursor()
     state.battleSystem:attack(unit, target)
     clearAttackPreview()
     refreshHighlights()
-    state.battleOutcome = state.battleSystem:checkBattleOutcome()
+    evaluateBattleState()
     updateTurnOrder()
 end
 
@@ -301,7 +512,7 @@ local function endTurn()
         return
     end
     local nextUnit = state.battleSystem:endTurn()
-    state.battleOutcome = state.battleSystem:checkBattleOutcome()
+    evaluateBattleState()
     updateTurnOrder()
     if nextUnit then
         beginTurn(nextUnit)
@@ -309,24 +520,17 @@ local function endTurn()
 end
 
 function love.load()
-    state.grid = Grid.new(10, 8, 64)
-    state.battlefield = Battlefield.new(state.grid)
-    local units = createUnits()
-    populateBattlefield(state.battlefield, units)
-    state.turnManager = TurnManager.new(units)
-    state.battleSystem = BattleSystem.new({ battlefield = state.battlefield, turnManager = state.turnManager })
-    state.enemyAI = EnemyAI.new({ battleSystem = state.battleSystem })
-    local current = state.turnManager:currentUnit()
-    state.cursor = Cursor.new(state.grid, current and current.col or 1, current and current.row or 1)
-    updateTurnOrder()
-    if current then
-        beginTurn(current)
-    end
     state.font = love.graphics.newFont(16)
     love.graphics.setBackgroundColor(0.08, 0.09, 0.12)
+    initializeScenario(Scenarios.getDefaultScenario())
+    evaluateBattleState()
 end
 
 function love.keypressed(key)
+    if key == 'escape' then
+      love.event.quit()
+      return
+    end
     if key == "up" then
         state.cursor:move(0, -1)
     elseif key == "down" then
