@@ -45,11 +45,17 @@ describe("EnemyAI", function()
 
     it("moves closer to the nearest opponent when out of range", function()
         local context = setupScenario({})
-        local startDistance = math.abs(context.enemy.col - context.ally.col) + math.abs(context.enemy.row - context.ally.row)
+        local startCol, startRow = context.enemy.col, context.enemy.row
+        local startDistance = math.abs(startCol - context.ally.col) + math.abs(startRow - context.ally.row)
         local result = context.ai:takeTurn(context.enemy)
         local newDistance = math.abs(context.enemy.col - context.ally.col) + math.abs(context.enemy.row - context.ally.row)
         assertTrue(result.moved, "enemy should move towards ally")
         assertTrue(newDistance < startDistance, "enemy should be closer after moving")
+        assertTrue(result.path ~= nil and #result.path >= 2, "enemy movement should expose the travelled path")
+        assertEquals(result.path[1].col, startCol)
+        assertEquals(result.path[1].row, startRow)
+        assertEquals(result.path[#result.path].col, context.enemy.col)
+        assertEquals(result.path[#result.path].row, context.enemy.row)
     end)
 
     it("follows up with an attack after moving into range", function()

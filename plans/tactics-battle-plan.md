@@ -17,11 +17,13 @@ Create a Final Fantasy Tactics-inspired overhead tactical combat prototype demon
 - Provide cursor selection and context-sensitive command prompts.
 - Implement movement preview and confirmation flows.
 - Resolve simple combat actions with hit point tracking and unit removal.
+- Track global time units per turn and allow actions to consume multiple units to enable pacing mechanics.
 
 ### Phase 3: AI and Scenario Expansion
 - [x] Add initiative-based AI turns with basic decision-making.
 - [x] Script example scenarios with victory/defeat conditions.
 - [ ] Introduce varied terrain types affecting movement.
+- [x] Establish a state machine to orchestrate battle, menu, and pause scenes.
 
 ## Acceptance Criteria
 

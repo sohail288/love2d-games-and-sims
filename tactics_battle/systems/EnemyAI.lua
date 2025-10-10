@@ -100,9 +100,11 @@ function EnemyAI:takeTurn(unit)
     local reachable = battleSystem:getReachableTiles(unit)
     local destination = chooseDestination(reachable, opponents)
     if destination and (destination.col ~= unit.col or destination.row ~= unit.row) then
+        local path = battleSystem:findPath(unit, destination.col, destination.row)
         battleSystem:move(unit, destination.col, destination.row)
         result.moved = true
         result.movedTo = copyPosition(destination)
+        result.path = path
     end
 
     attackable = battleSystem:getAttackableTargets(unit)
