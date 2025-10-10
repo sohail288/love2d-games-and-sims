@@ -56,6 +56,23 @@ describe("BattleSystem", function()
             assertTrue(battleSystem:hasMoved(), "unit should be marked as moved")
             assertTrue(not battleSystem:canMove(unit, 2, 3), "unit cannot move twice")
         end)
+
+        it("generates a step-by-step path to a reachable tile", function()
+            local context = setupBattle()
+            local battleSystem = context.battleSystem
+            local unit = context.units[1]
+
+            local path = battleSystem:findPath(unit, 2, 4)
+            assertTrue(path ~= nil, "path should be returned for reachable destination")
+            assertEquals(#path, 3)
+            assertEquals(path[1].col, 2)
+            assertEquals(path[1].row, 2)
+            assertEquals(path[#path].col, 2)
+            assertEquals(path[#path].row, 4)
+
+            local blockedPath = battleSystem:findPath(unit, 4, 2)
+            assertTrue(blockedPath == nil, "cannot path onto an occupied tile")
+        end)
     end)
 
     describe("attacks", function()
@@ -117,6 +134,29 @@ describe("BattleSystem", function()
             local nextUnit = battleSystem:endTurn()
             assertTrue(nextUnit ~= nil, "should advance to next unit")
             assertEquals(nextUnit.id, context.units[2].id)
+        end)
+
+        it("tracks the highest action time cost during a turn", function()
+            local grid = Grid.new(5, 5, 32)
+            local battlefield = Battlefield.new(grid)
+            local actor = Unit.new({ id = "actor", faction = "allies", col = 2, row = 2, move = 3, attackPower = 20, timeCosts = { move = 2, attack = 3 } })
+            local enemy = Unit.new({ id = "enemy", faction = "enemies", col = 3, row = 2, hp = 20 })
+            battlefield:addUnit(actor, actor.col, actor.row)
+            battlefield:addUnit(enemy, enemy.col, enemy.row)
+            local turnManager = TurnManager.new({ actor, enemy })
+            local battleSystem = BattleSystem.new({ battlefield = battlefield, turnManager = turnManager })
+
+            battleSystem:startTurn(actor)
+            battleSystem:move(actor, 2, 3)
+            assertEquals(battleSystem:getTurnTimeCost(), 2)
+
+            battlefield:moveUnit(enemy, 3, 3)
+            local result = battleSystem:attack(actor, enemy)
+            assertTrue(result.defeated, "enemy should be defeated")
+            assertEquals(battleSystem:getTurnTimeCost(), 3)
+
+            local _, timeCost = battleSystem:endTurn()
+            assertEquals(timeCost, 3)
         end)
     end)
 

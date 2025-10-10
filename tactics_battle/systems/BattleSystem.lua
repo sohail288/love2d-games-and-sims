@@ -18,6 +18,14 @@ local function copyTile(tile)
     return { col = tile.col, row = tile.row, distance = tile.distance }
 end
 
+local function decodeKey(key)
+    local col, row = key:match("^(%-?%d+)_(%-?%d+)$")
+    if not col then
+        error("invalid tile key: " .. tostring(key))
+    end
+    return tonumber(col), tonumber(row)
+end
+
 function BattleSystem.new(args)
     assert(args and args.battlefield, "battlefield required")
     assert(args.turnManager, "turn manager required")
@@ -30,7 +38,8 @@ function BattleSystem.new(args)
         acted = false,
         outcome = nil,
         scenario = args.scenario,
-        scenarioState = args.scenarioState
+        scenarioState = args.scenarioState,
+        turnTimeCost = 1
     }
 
     return setmetatable(instance, BattleSystem)
@@ -40,6 +49,7 @@ function BattleSystem:startTurn(unit)
     self.currentUnit = unit
     self.moved = false
     self.acted = false
+    self.turnTimeCost = 1
 end
 
 function BattleSystem:hasMoved()
@@ -50,12 +60,34 @@ function BattleSystem:hasActed()
     return self.acted
 end
 
-function BattleSystem:_reachableTiles(unit)
+function BattleSystem:getActionTimeCost(actionType, unit)
+    if unit and unit.timeCosts and unit.timeCosts[actionType] then
+        return unit.timeCosts[actionType]
+    end
+    if self.scenario and self.scenario.actionTimeCosts then
+        local cost = self.scenario.actionTimeCosts[actionType]
+        if type(cost) == "table" and unit then
+            if cost[unit.id] ~= nil then
+                return cost[unit.id]
+            end
+        elseif cost ~= nil then
+            return cost
+        end
+    end
+    return 1
+end
+
+function BattleSystem:getTurnTimeCost()
+    return self.turnTimeCost or 1
+end
+
+function BattleSystem:_searchReachable(unit)
     local grid = self.battlefield.grid
     local maxDistance = unit.move or 0
     local queue = { { col = unit.col, row = unit.row, distance = 0 } }
     local head = 1
-    local visited = { [tileKey(unit.col, unit.row)] = true }
+    local visited = { [tileKey(unit.col, unit.row)] = { distance = 0 } }
+    local parents = {}
     local tiles = {}
 
     while queue[head] do
@@ -70,7 +102,8 @@ function BattleSystem:_reachableTiles(unit)
                     if not visited[key] then
                         local occupant = self.battlefield:getUnitAt(neighbor.col, neighbor.row)
                         if not occupant or occupant.id == unit.id then
-                            visited[key] = true
+                            visited[key] = { distance = node.distance + 1 }
+                            parents[key] = tileKey(node.col, node.row)
                             neighbor.distance = node.distance + 1
                             queue[#queue + 1] = neighbor
                         end
@@ -80,12 +113,13 @@ function BattleSystem:_reachableTiles(unit)
         end
     end
 
-    return tiles
+    return tiles, visited, parents
 end
 
 function BattleSystem:getReachableTiles(unit)
     assert(unit, "unit required")
-    return self:_reachableTiles(unit)
+    local tiles = self:_searchReachable(unit)
+    return tiles
 end
 
 local function containsTile(tiles, col, row)
@@ -118,6 +152,10 @@ function BattleSystem:move(unit, col, row)
         self.battlefield:moveUnit(unit, col, row)
     end
     self.moved = true
+    local cost = self:getActionTimeCost("move", unit)
+    if cost > (self.turnTimeCost or 1) then
+        self.turnTimeCost = cost
+    end
 end
 
 local function manhattan(a, b)
@@ -186,6 +224,10 @@ function BattleSystem:attack(attacker, target)
     target:takeDamage(attacker.attackPower)
     local defeated = not target:isAlive()
     self.acted = true
+    local cost = self:getActionTimeCost("attack", attacker)
+    if cost > (self.turnTimeCost or 1) then
+        self.turnTimeCost = cost
+    end
     self:_finalizeTarget(target)
     return {
         target = target,
@@ -301,18 +343,39 @@ function BattleSystem:checkBattleOutcome()
     return self.outcome
 end
 
+function BattleSystem:findPath(unit, destinationCol, destinationRow)
+    assert(unit, "unit required")
+    local _, visited, parents = self:_searchReachable(unit)
+    local goalKey = tileKey(destinationCol, destinationRow)
+    if not visited[goalKey] then
+        return nil
+    end
+
+    local path = {}
+    local currentKey = goalKey
+    while currentKey do
+        local col, row = decodeKey(currentKey)
+        table.insert(path, 1, { col = col, row = row })
+        currentKey = parents[currentKey]
+    end
+
+    return path
+end
+
 function BattleSystem:endTurn()
     self.currentUnit = nil
     self.moved = false
     self.acted = false
+    local timeCost = self.turnTimeCost or 1
+    self.turnTimeCost = 1
     if self:checkBattleOutcome() then
-        return nil
+        return nil, timeCost
     end
     local nextUnit = self.turnManager:advance()
     if nextUnit then
         self:startTurn(nextUnit)
     end
-    return nextUnit
+    return nextUnit, timeCost
 end
 
 return BattleSystem

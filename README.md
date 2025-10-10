@@ -5,6 +5,9 @@ This repository collects small Love2D projects that explore gameplay and simulat
 ## Projects
 
 - `tactics_battle/`: Overhead tactical combat prototype with grid rendering, unit placement, initiative-based turns, visible turn order, enemy AI, and a battle system supporting movement ranges plus melee/ranged attacks.
+    - Turn resolution advances a global time unit counter, and actions can declare multi-unit time costs so scenarios can pace abilities and scripted events.
+    - Unit movement now tween between tiles via `love.update(dt)` to prepare for richer animation while preserving deterministic logic in the battle system.
+    - Scene-driven architecture powered by a reusable game state machine keeps the battle flow isolated from future menus, pause screens, and world navigation.
 - `homing_rocket/`: Demonstrates steering behaviour for a homing projectile.
 - `path_finding/`: Visualizes grid-based pathfinding with interactive menus.
 
@@ -35,7 +38,7 @@ lua tests/run_tests.lua
 A lightweight lint step checks Lua syntax:
 
 ```bash
-find . -name '*.lua' -not -path './vendor/*' -print0 | xargs -0 -n1 lua -p
+find . -name '*.lua' -not -path './vendor/*' -print0 | xargs -0 -n1 luac -p
 ```
 
 ### Plans and Documentation

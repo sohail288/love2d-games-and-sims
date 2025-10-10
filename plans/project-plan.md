@@ -14,3 +14,4 @@
 - *2025-10-08*: Implemented turn-based battle system with movement ranges, attacks, and unit elimination rules.
 - *2025-10-08*: Added initiative-driven enemy AI, turn order HUD, and attack flow fixes for the tactical battle prototype.
 - *2025-10-09*: Added reusable scenario definitions with objective tracking, victory/defeat evaluators, and extended unit tests.
+- *2025-10-09*: Introduced a reusable game state machine with a dedicated battle state to prepare for menus, pause screens, and world navigation scenes.

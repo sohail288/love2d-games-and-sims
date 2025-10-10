@@ -16,7 +16,10 @@ function Unit.new(args)
         attackRange = args.attackRange or 1,
         attackPower = args.attackPower or 25,
         col = args.col or 1,
-        row = args.row or 1
+        row = args.row or 1,
+        visualCol = args.col or 1,
+        visualRow = args.row or 1,
+        timeCosts = args.timeCosts
     }
 
     return setmetatable(unit, Unit)
@@ -25,6 +28,17 @@ end
 function Unit:setPosition(col, row)
     self.col = col
     self.row = row
+    self.visualCol = self.visualCol or col
+    self.visualRow = self.visualRow or row
+end
+
+function Unit:setRenderPosition(col, row)
+    self.visualCol = col
+    self.visualRow = row
+end
+
+function Unit:getRenderPosition()
+    return self.visualCol or self.col, self.visualRow or self.row
 end
 
 function Unit:isAlive()
