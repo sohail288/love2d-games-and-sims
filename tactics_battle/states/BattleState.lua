@@ -3,6 +3,7 @@ local Unit = require("tactics_battle.world.Unit")
 local Battlefield = require("tactics_battle.world.Battlefield")
 local TurnManager = require("tactics_battle.systems.TurnManager")
 local BattleSystem = require("tactics_battle.systems.BattleSystem")
+local BattleFlowStateMachine = require("tactics_battle.systems.BattleFlowStateMachine")
 local EnemyAI = require("tactics_battle.systems.EnemyAI")
 local Cursor = require("tactics_battle.ui.Cursor")
 local Scenarios = require("tactics_battle.scenarios.init")
@@ -31,7 +32,8 @@ local function newScene()
         objectiveLookup = nil,
         timeUnits = 0,
         movementAnimation = nil,
-        movementDuration = 0.18
+        movementDuration = 0.18,
+        flowMachine = nil
     }
 end
 
@@ -107,7 +109,7 @@ end
 local function updateMovementAnimation(scene, dt)
     local animation = scene.movementAnimation
     if not animation then
-        return
+        return false
     end
 
     local path = animation.path
@@ -123,14 +125,14 @@ local function updateMovementAnimation(scene, dt)
         if animation.segment >= #path then
             animation.unit:setRenderPosition(animation.unit.col, animation.unit.row)
             scene.movementAnimation = nil
-            return
+            return true
         end
     end
 
     if animation.segment >= #path then
         animation.unit:setRenderPosition(animation.unit.col, animation.unit.row)
         scene.movementAnimation = nil
-        return
+        return true
     end
 
     local from = path[animation.segment]
@@ -139,6 +141,7 @@ local function updateMovementAnimation(scene, dt)
     local col = from.col + (to.col - from.col) * t
     local row = from.row + (to.row - from.row) * t
     animation.unit:setRenderPosition(col, row)
+    return false
 end
 
 local function createScenarioContext(scene, extras)
@@ -285,6 +288,10 @@ local function beginTurn(scene, unit)
         scene.cursor:setPosition(unit.col, unit.row)
     end
 
+    if scene.flowMachine then
+        scene.flowMachine:beginTurn(unit)
+    end
+
     updateTurnOrder(scene)
     triggerScenarioHook(scene, "onTurnStart", { unit = unit })
 
@@ -307,6 +314,22 @@ local function beginTurn(scene, unit)
                 beginTurn(scene, nextUnit)
             end
         end
+    end
+end
+
+local function endTurn(scene)
+    scene.selectedUnit = nil
+    scene.moveTiles = nil
+    clearAttackPreview(scene)
+    if not scene.battleSystem then
+        return
+    end
+    local nextUnit, timeCost = scene.battleSystem:endTurn()
+    advanceTime(scene, timeCost)
+    evaluateBattleState(scene)
+    updateTurnOrder(scene)
+    if nextUnit then
+        beginTurn(scene, nextUnit)
     end
 end
 
@@ -352,6 +375,23 @@ local function initializeScenario(scene, scenario)
         turnManager = scene.turnManager,
         scenario = scenario,
         scenarioState = scene.scenarioState
+    })
+    scene.flowMachine = BattleFlowStateMachine.new({
+        battleSystem = scene.battleSystem,
+        battlefield = scene.battlefield,
+        onAwaitingInput = function()
+            refreshHighlights(scene)
+        end,
+        onActionComplete = function()
+            evaluateBattleState(scene)
+            updateTurnOrder(scene)
+        end,
+        onNoActionsRemaining = function()
+            refreshHighlights(scene)
+        end,
+        onTurnComplete = function()
+            endTurn(scene)
+        end
     })
     scene.enemyAI = EnemyAI.new({ battleSystem = scene.battleSystem })
 
@@ -538,7 +578,7 @@ local function drawHud(scene)
         love.graphics.print("Turn Order: " .. table.concat(labels, " -> "), 16, y)
     end
 
-    love.graphics.print("Controls: Arrows move cursor, Space select, Enter move, A attack, Tab end turn", 16, love.graphics.getHeight() - 32)
+    love.graphics.print("Controls: Arrows move cursor, Space select, Enter move, A attack, Tab skip turn (auto end)", 16, love.graphics.getHeight() - 32)
 end
 
 local function selectUnitAtCursor(scene)
@@ -564,11 +604,18 @@ local function moveSelectedUnit(scene)
         return
     end
     clearAttackPreview(scene)
+    scene.moveTiles = nil
     scene.battleSystem:move(scene.selectedUnit, destinationCol, destinationRow)
-    refreshHighlights(scene)
+    local hasAnimation = path and #path >= 2
     startMovementAnimation(scene, scene.selectedUnit, path)
     if scene.cursor then
         scene.cursor:setPosition(destinationCol, destinationRow)
+    end
+    if scene.flowMachine then
+        scene.flowMachine:onMoveCommitted(hasAnimation)
+        if not hasAnimation then
+            scene.flowMachine:onAnimationsComplete("move")
+        end
     end
 end
 
@@ -590,24 +637,9 @@ local function attackTargetAtCursor(scene)
 
     scene.battleSystem:attack(unit, target)
     clearAttackPreview(scene)
-    refreshHighlights(scene)
-    evaluateBattleState(scene)
-    updateTurnOrder(scene)
-end
-
-local function endTurn(scene)
-    scene.selectedUnit = nil
-    scene.moveTiles = nil
-    clearAttackPreview(scene)
-    if not scene.battleSystem then
-        return
-    end
-    local nextUnit, timeCost = scene.battleSystem:endTurn()
-    advanceTime(scene, timeCost)
-    evaluateBattleState(scene)
-    updateTurnOrder(scene)
-    if nextUnit then
-        beginTurn(scene, nextUnit)
+    if scene.flowMachine then
+        scene.flowMachine:onAttackCommitted(false)
+        scene.flowMachine:onAnimationsComplete("attack")
     end
 end
 
@@ -640,8 +672,15 @@ function BattleState:exit(_game)
 end
 
 function BattleState:update(_game, dt)
+    local completed = false
     if dt then
-        updateMovementAnimation(self.scene, dt)
+        completed = updateMovementAnimation(self.scene, dt) or false
+    end
+    if completed and self.scene.flowMachine then
+        self.scene.flowMachine:onAnimationsComplete("move")
+    end
+    if self.scene.flowMachine then
+        self.scene.flowMachine:update(dt or 0)
     end
 end
 
@@ -686,7 +725,11 @@ function BattleState:keypressed(game, key)
     elseif key == "a" then
         attackTargetAtCursor(self.scene)
     elseif key == "tab" then
-        endTurn(self.scene)
+        if self.scene.flowMachine then
+            self.scene.flowMachine:skipTurn()
+        else
+            endTurn(self.scene)
+        end
     elseif key == "p" then
         local pauseState = game:getState("pause")
         if pauseState then
