@@ -15,7 +15,7 @@ This repository collects small Love2D projects that explore gameplay and simulat
 
 1. Install [Love2D](https://love2d.org/).
 2. From the repository root, run `love tactics_battle`.
-3. Use the arrow keys to move the cursor, press **Space** to select the active unit, **Enter** to move to the highlighted tile, **A** to preview the attack range and strike enemies in reach, and **Tab** to end the turn. Enemy units will automatically take their turn when highlighted in the initiative display.
+3. Use the arrow keys to move the cursor, press **Space** to select the active unit, **Enter** to move to the highlighted tile, **A** to preview the attack range and strike enemies in reach. Turns now end automatically once the acting unit has no remaining actions; press **Tab** only when you want to skip any remaining options. Enemy units will automatically take their turn when highlighted in the initiative display.
 
 ### Scenario System
 
@@ -45,5 +45,6 @@ find . -name '*.lua' -not -path './vendor/*' -print0 | xargs -0 -n1 luac -p
 
 - `plans/project-plan.md` tracks the roadmap and history of features.
 - `plans/tactics-battle-plan.md` outlines the tactical battle feature phases.
+- `plans/battle-flow-state-machine-plan.md` captures the phased rollout for the turn flow controller.
 - `plans/technical-considerations.md` captures noteworthy technical notes.
 - `STRUCTURE.md` summarizes the directory layout.
