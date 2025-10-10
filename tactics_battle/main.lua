@@ -1,6 +1,8 @@
 local Game = require("tactics_battle.Game")
 local BattleState = require("tactics_battle.states.BattleState")
-local Scenarios = require("tactics_battle.scenarios.init")
+local StartMenuState = require("tactics_battle.states.StartMenuState")
+local WorldMapState = require("tactics_battle.states.WorldMapState")
+local CutsceneState = require("tactics_battle.states.CutsceneState")
 
 local game
 
@@ -11,11 +13,16 @@ local function bootGame()
     game = Game.new({ font = font })
 
     local battleState = BattleState.new()
-    game:registerState("battle", battleState)
+    local startMenuState = StartMenuState.new()
+    local worldMapState = WorldMapState.new()
+    local cutsceneState = CutsceneState.new()
 
-    game:changeState("battle", {
-        scenario = Scenarios.getDefaultScenario()
-    })
+    game:registerState("battle", battleState)
+    game:registerState("start_menu", startMenuState)
+    game:registerState("world_map", worldMapState)
+    game:registerState("cutscene", cutsceneState)
+
+    game:changeState("start_menu")
 end
 
 function love.load()
