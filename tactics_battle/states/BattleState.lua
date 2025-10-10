@@ -22,6 +22,7 @@ local function newScene()
         moveTiles = nil,
         attackTiles = nil,
         battleOutcome = nil,
+        battleOutcomeHandled = false,
         battleSystem = nil,
         enemyAI = nil,
         turnOrder = nil,
@@ -33,7 +34,8 @@ local function newScene()
         timeUnits = 0,
         movementAnimation = nil,
         movementDuration = 0.18,
-        flowMachine = nil
+        flowMachine = nil,
+        onComplete = nil
     }
 end
 
@@ -657,6 +659,8 @@ function BattleState:enter(game, params)
     local scenario = params and params.scenario or Scenarios.getDefaultScenario()
     local context = game:getContext()
     self.scene.font = context.font
+    self.scene.onComplete = params and params.onComplete or nil
+    self.scene.battleOutcomeHandled = false
 
     if not self.scene.font and love and love.graphics and love.graphics.newFont then
         self.scene.font = love.graphics.newFont(16)
@@ -671,7 +675,7 @@ function BattleState:exit(_game)
     self.scene = newScene()
 end
 
-function BattleState:update(_game, dt)
+function BattleState:update(game, dt)
     local completed = false
     if dt then
         completed = updateMovementAnimation(self.scene, dt) or false
@@ -681,6 +685,14 @@ function BattleState:update(_game, dt)
     end
     if self.scene.flowMachine then
         self.scene.flowMachine:update(dt or 0)
+    end
+    if self.scene.battleOutcome and not self.scene.battleOutcomeHandled then
+        self.scene.battleOutcomeHandled = true
+        local callback = self.scene.onComplete
+        if callback then
+            self.scene.onComplete = nil
+            callback(game, self.scene.battleOutcome)
+        end
     end
 end
 

@@ -25,3 +25,10 @@
 - A lightweight `Game` module coordinates named states, ensuring `enter`, `exit`, `update`, and `render` lifecycles remain isolated per scene.
 - States receive the game context so they can share assets (fonts, configuration) without resorting to globals, easing future additions like pause or world map scenes.
 - Unit tests stub the Love2D API to validate state transitions and battle scene initialization without requiring the engine runtime.
+- Narrative states (start menu, world map, cutscenes) compose via callbacks rather than globals so campaign flow can react to battle outcomes while staying testable.
+- World map data is stored in plain Lua tables and mirrored into the shared context, enabling persistence between state transitions without serialisation.
+
+## World Navigation
+- World maps describe connections as simple graphs; the map module runs a breadth-first search to produce the shortest path between destinations.
+- Active travel serialises its remaining path so battles or cutscenes can interrupt the journey and resume it on return to the map state.
+- Locations flag mandatory stops to require player interaction, while optional towns are automatically passed unless chosen as the destination.

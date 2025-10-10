@@ -9,7 +9,8 @@
 ├── plans/
 │   ├── project-plan.md
 │   ├── tactics-battle-plan.md
-│   └── technical-considerations.md
+│   ├── technical-considerations.md
+│   └── narrative-world-plan.md
 ├── tactics_battle/
 │   ├── conf.lua
 │   ├── Game.lua
@@ -18,17 +19,23 @@
 │   │   ├── init.lua
 │   │   └── training_ground.lua
 │   ├── states/
-│   │   └── BattleState.lua
+│   │   ├── BattleState.lua
+│   │   ├── CutsceneState.lua
+│   │   ├── StartMenuState.lua
+│   │   └── WorldMapState.lua
 │   ├── systems/
 │   │   ├── BattleSystem.lua
 │   │   ├── EnemyAI.lua
-│   │   └── TurnManager.lua
+│   │   ├── TurnManager.lua
+│   │   └── DialogueSystem.lua
 │   ├── ui/
 │   │   └── Cursor.lua
 │   └── world/
 │       ├── Battlefield.lua
 │       ├── Grid.lua
-│       └── Unit.lua
+│       ├── Unit.lua
+│       ├── WorldMap.lua
+│       └── default_map.lua
 └── tests/
     ├── run_tests.lua
     └── tactics_battle/
@@ -37,6 +44,7 @@
         ├── test_enemy_ai.lua
         ├── test_game.lua
         ├── test_grid.lua
+        ├── test_narrative_states.lua
         ├── test_scenarios.lua
         └── test_turn_manager.lua
 ```
