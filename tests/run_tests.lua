@@ -64,7 +64,8 @@ local testFiles = {
     "tests.tactics_battle.test_turn_manager",
     "tests.tactics_battle.test_enemy_ai",
     "tests.tactics_battle.test_scenarios",
-    "tests.tactics_battle.test_game"
+    "tests.tactics_battle.test_game",
+    "tests.tactics_battle.test_narrative_states"
 }
 
 local total = 0
