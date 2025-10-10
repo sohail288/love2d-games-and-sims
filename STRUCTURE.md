@@ -13,6 +13,9 @@
 ├── tactics_battle/
 │   ├── conf.lua
 │   ├── main.lua
+│   ├── scenarios/
+│   │   ├── init.lua
+│   │   └── training_ground.lua
 │   ├── systems/
 │   │   ├── BattleSystem.lua
 │   │   ├── EnemyAI.lua
@@ -30,5 +33,6 @@
         ├── test_battle_system.lua
         ├── test_enemy_ai.lua
         ├── test_grid.lua
+        ├── test_scenarios.lua
         └── test_turn_manager.lua
 ```

@@ -20,7 +20,7 @@ Create a Final Fantasy Tactics-inspired overhead tactical combat prototype demon
 
 ### Phase 3: AI and Scenario Expansion
 - [x] Add initiative-based AI turns with basic decision-making.
-- [ ] Script example scenarios with victory/defeat conditions.
+- [x] Script example scenarios with victory/defeat conditions.
 - [ ] Introduce varied terrain types affecting movement.
 
 ## Acceptance Criteria
@@ -33,4 +33,4 @@ Create a Final Fantasy Tactics-inspired overhead tactical combat prototype demon
 
 - [x] Phase 1 tasks initiated with foundational grid, unit, and turn modules.
 - [x] Phase 2 tasks implemented with selectable units, movement ranges, and combat resolution.
-- [ ] Phase 3 tasks implemented (AI complete, scenario and terrain work pending).
+- [ ] Phase 3 tasks implemented (AI and scenario scripting complete, terrain work pending).

@@ -14,6 +14,12 @@ This repository collects small Love2D projects that explore gameplay and simulat
 2. From the repository root, run `love tactics_battle`.
 3. Use the arrow keys to move the cursor, press **Space** to select the active unit, **Enter** to move to the highlighted tile, **A** to preview the attack range and strike enemies in reach, and **Tab** to end the turn. Enemy units will automatically take their turn when highlighted in the initiative display.
 
+### Scenario System
+
+- Scenarios are pure Lua tables stored under `tactics_battle/scenarios/` that describe the grid size, initial unit placements, scripted hooks, and custom victory/defeat evaluators.
+- The HUD surfaces the active scenario name, objective tracker, and the reason supplied by the resolved victory condition to make mission progress clear.
+- Objectives are evaluated after every state change, allowing scenarios to react to turn transitions or unit defeats without relying on the Love2D runtime.
+
 ## Development
 
 ### Tests

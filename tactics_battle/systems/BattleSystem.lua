@@ -28,7 +28,9 @@ function BattleSystem.new(args)
         currentUnit = nil,
         moved = false,
         acted = false,
-        outcome = nil
+        outcome = nil,
+        scenario = args.scenario,
+        scenarioState = args.scenarioState
     }
 
     return setmetatable(instance, BattleSystem)
@@ -192,8 +194,86 @@ function BattleSystem:attack(attacker, target)
     }
 end
 
+local function mergeExtras(context, extras)
+    if not extras then
+        return context
+    end
+    for key, value in pairs(extras) do
+        context[key] = value
+    end
+    return context
+end
+
+function BattleSystem:_buildScenarioContext(extras)
+    if not self.scenario then
+        return nil
+    end
+
+    local battlefield = self.battlefield
+    local context = mergeExtras({
+        battleSystem = self,
+        battlefield = battlefield,
+        turnManager = self.turnManager,
+        scenario = self.scenario,
+        scenarioState = self.scenarioState or {}
+    }, extras)
+
+    function context:countFactionUnits(faction)
+        local count = 0
+        for _, unit in ipairs(battlefield.units) do
+            if unit.faction == faction then
+                count = count + 1
+            end
+        end
+        return count
+    end
+
+    function context:listFactionUnits(faction)
+        local result = {}
+        for _, unit in ipairs(battlefield.units) do
+            if faction == nil or unit.faction == faction then
+                result[#result + 1] = unit
+            end
+        end
+        return result
+    end
+
+    return context
+end
+
+local function evaluateConditions(self, conditions)
+    if not conditions or not self.scenario then
+        return nil
+    end
+
+    local context = self:_buildScenarioContext()
+    for _, evaluator in ipairs(conditions) do
+        local result = evaluator(context)
+        if result then
+            if result.draw == nil then
+                result.draw = false
+            end
+            return result
+        end
+    end
+
+    return nil
+end
+
 function BattleSystem:checkBattleOutcome()
     if self.outcome then
+        return self.outcome
+    end
+
+    local scenarioVictory = evaluateConditions(self, self.scenario and self.scenario.victoryConditions)
+    if scenarioVictory then
+        self.outcome = scenarioVictory
+        return self.outcome
+    end
+
+    local scenarioDefeat = evaluateConditions(self, self.scenario and self.scenario.defeatConditions)
+    if scenarioDefeat then
+        self.outcome = scenarioDefeat
         return self.outcome
     end
 
@@ -209,9 +289,13 @@ function BattleSystem:checkBattleOutcome()
     end
 
     if #contenders == 0 then
-        self.outcome = { winner = nil, draw = true }
+        self.outcome = { winner = nil, draw = true, reason = "All combatants were defeated." }
     elseif #contenders == 1 then
-        self.outcome = { winner = contenders[1], draw = false }
+        self.outcome = {
+            winner = contenders[1],
+            draw = false,
+            reason = string.format("Only the %s remain standing.", contenders[1])
+        }
     end
 
     return self.outcome

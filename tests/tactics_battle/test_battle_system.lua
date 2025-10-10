@@ -119,4 +119,19 @@ describe("BattleSystem", function()
             assertEquals(nextUnit.id, context.units[2].id)
         end)
     end)
+
+    describe("outcome evaluation", function()
+        it("provides elimination reasons when only one faction remains", function()
+            local context = setupBattle()
+            local battleSystem = context.battleSystem
+
+            context.battlefield:removeUnit(context.units[2])
+            context.turnManager:removeUnit(context.units[2])
+
+            local outcome = battleSystem:checkBattleOutcome()
+            assertTrue(outcome ~= nil, "battle should conclude when one faction remains")
+            assertEquals(outcome.winner, "allies")
+            assertEquals(outcome.reason, "Only the allies remain standing.")
+        end)
+    end)
 end)
