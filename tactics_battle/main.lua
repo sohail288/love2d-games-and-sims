@@ -5,7 +5,7 @@ local TurnManager = require("tactics_battle.systems.TurnManager")
 local BattleSystem = require("tactics_battle.systems.BattleSystem")
 local EnemyAI = require("tactics_battle.systems.EnemyAI")
 local Cursor = require("tactics_battle.ui.Cursor")
-local Scenarios = require("tactics_battle.scenarios")
+local Scenarios = require("tactics_battle.scenarios.init")
 
 local state = {
     grid = nil,
@@ -197,6 +197,44 @@ local function formatObjectiveStatus(status)
     end
     local label = status:gsub("_", " ")
     return label:sub(1, 1):upper() .. label:sub(2)
+end
+
+local function beginTurn(unit)
+    if not unit or not state.battleSystem or state.battleOutcome then
+        return
+    end
+
+    if state.battleSystem.currentUnit ~= unit then
+        state.battleSystem:startTurn(unit)
+    end
+
+    state.selectedUnit = nil
+    state.moveTiles = nil
+    clearAttackPreview()
+
+    if state.cursor then
+        state.cursor:setPosition(unit.col, unit.row)
+    end
+
+    updateTurnOrder()
+    triggerScenarioHook("onTurnStart", { unit = unit })
+
+    if unit.faction == "enemies" and state.enemyAI then
+        local actions = state.enemyAI:takeTurn(unit)
+        if actions.attacked or actions.moved then
+            refreshHighlights()
+        end
+        evaluateBattleState()
+        updateTurnOrder()
+        if not state.battleOutcome then
+            local nextUnit = state.battleSystem:endTurn()
+            evaluateBattleState()
+            updateTurnOrder()
+            if nextUnit then
+                beginTurn(nextUnit)
+            end
+        end
+    end
 end
 
 local function initializeScenario(scenario)
@@ -423,43 +461,6 @@ local function drawHud()
     love.graphics.print("Controls: Arrows move cursor, Space select, Enter move, A attack, Tab end turn", 16, love.graphics.getHeight() - 32)
 end
 
-local function beginTurn(unit)
-    if not unit or not state.battleSystem or state.battleOutcome then
-        return
-    end
-
-    if state.battleSystem.currentUnit ~= unit then
-        state.battleSystem:startTurn(unit)
-    end
-
-    state.selectedUnit = nil
-    state.moveTiles = nil
-    clearAttackPreview()
-
-    if state.cursor then
-        state.cursor:setPosition(unit.col, unit.row)
-    end
-
-    updateTurnOrder()
-    triggerScenarioHook("onTurnStart", { unit = unit })
-
-    if unit.faction == "enemies" and state.enemyAI then
-        local actions = state.enemyAI:takeTurn(unit)
-        if actions.attacked or actions.moved then
-            refreshHighlights()
-        end
-        evaluateBattleState()
-        updateTurnOrder()
-        if not state.battleOutcome then
-            local nextUnit = state.battleSystem:endTurn()
-            evaluateBattleState()
-            updateTurnOrder()
-            if nextUnit then
-                beginTurn(nextUnit)
-            end
-        end
-    end
-end
 
 local function selectUnitAtCursor()
     local unit = state.battlefield:getUnitAt(state.cursor.col, state.cursor.row)
@@ -526,6 +527,10 @@ function love.load()
 end
 
 function love.keypressed(key)
+    if key == 'escape' then
+      love.event.quit()
+      return
+    end
     if key == "up" then
         state.cursor:move(0, -1)
     elseif key == "down" then
