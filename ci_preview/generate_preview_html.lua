@@ -20,6 +20,9 @@ local function parseArgs(rawArgs)
         elseif argValue == "--lovejs-path" then
             index = index + 1
             options.loveJsPath = rawArgs[index]
+        elseif argValue == "--start-button-label" then
+            index = index + 1
+            options.startButtonLabel = rawArgs[index]
         else
             error("unknown option: " .. tostring(argValue))
         end
@@ -44,6 +47,7 @@ local html = template.renderPreviewHtml({
     loadingMessage = options.loadingMessage or "This build downloads the love.js runtime before launching the tactical battle prototype.",
     gameArchive = options.gameArchive or "game.love",
     loveJsPath = options.loveJsPath or "love.js",
+    startButtonLabel = options.startButtonLabel,
 })
 
 writeFile(outputPath, html)

@@ -13,9 +13,10 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Install Lua 5.1
-        uses: leafo/gh-actions-lua@v9
+        uses: leafo/gh-actions-lua@v11
         with:
           luaVersion: "5.1"
+          buildCache: "false"
 
       - name: Install LuaRocks
         uses: leafo/gh-actions-luarocks@v4
@@ -24,7 +25,7 @@ jobs:
         run: lua tests/run_tests.lua
 
       - name: Lint Lua sources
-        run: find . -name '*.lua' -not -path './vendor/*' -print0 | xargs -0 -n1 luac -p
+        run: find . -type f -name '*.lua' -not -path './vendor/*' -print0 | xargs -0 -n1 luac -p
 
       - name: Prepare build directories
         run: |
@@ -51,7 +52,7 @@ jobs:
         run: lua ci_preview/generate_preview_html.lua --output build/lovejs/index.html --game-archive game.love --lovejs-path love.js
 
       - name: Upload preview artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: lovejs-preview
           path: build/lovejs

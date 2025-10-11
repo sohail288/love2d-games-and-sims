@@ -68,6 +68,8 @@ unzip -o build/lovejs-runtime.zip -d build/lovejs
 mv build/lovejs/love.js-11.4/* build/lovejs/ && rm -rf build/lovejs/love.js-11.4
 cp build/tactics_battle.love build/lovejs/game.love
 lua ci_preview/generate_preview_html.lua --output build/lovejs/index.html
+# optionally customize the launch button label
+# lua ci_preview/generate_preview_html.lua --start-button-label "Play Tactical Demo"
 ```
 
 ### Plans and Documentation
