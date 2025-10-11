@@ -1,9 +1,5 @@
 -- a simple http client for making requests to an OpenAI-compatible API
--- assumes the existence of a `fetch` function for making http requests
--- and a `dkjson` library for json encoding/decoding
-
-local https = require("ssl.https")
-local ltn12 = require("ltn12")
+local https = require("https")
 
 local dkjson = require("tactics_battle.lib.dkjson")
 
@@ -37,18 +33,14 @@ function ApiClient:generate_text(prompt)
 
     local body_json = dkjson.encode(body)
 
-    local response_body = {}
-    local _, code, _, _ = https.request{
-        url = API_URL,
+    local code, body, _ = https.request(API_URL, {
         method = "POST",
         headers = headers,
-        source = ltn12.source.string(body_json),
-        sink = ltn12.sink.table(response_body)
-    }
+        data = body_json
+    })
 
     if code == 200 then
-        local response_string = table.concat(response_body)
-        local success, response_json = pcall(dkjson.decode, response_string)
+        local success, response_json = pcall(dkjson.decode, body)
         if success then
             return response_json
         else
