@@ -27,6 +27,7 @@ function html_template.renderPreviewHtml(options)
     local title = escapeHtmlAttribute(resolveOption(options, "title", "Love2D Preview"))
     local backgroundColor = escapeHtmlAttribute(resolveOption(options, "backgroundColor", "#0f172a"))
     local loadingMessage = escapeHtmlAttribute(resolveOption(options, "loadingMessage", "Loading tactical battle preview..."))
+    local startButtonLabel = escapeHtmlAttribute(resolveOption(options, "startButtonLabel", "Launch Preview"))
     local canvasId = escapeHtmlAttribute(resolveOption(options, "canvasId", "love-preview-canvas"))
     local gameArchive = escapeHtmlAttribute(resolveOption(options, "gameArchive", "game.love"))
     local loveJsPath = escapeHtmlAttribute(resolveOption(options, "loveJsPath", "love.js"))
@@ -78,7 +79,7 @@ function html_template.renderPreviewHtml(options)
 <body>
     <div id="loader">
         <p>]] .. loadingMessage .. [[</p>
-        <button id="start-button" type="button">Launch Preview</button>
+        <button id="start-button" type="button">]] .. startButtonLabel .. [[</button>
     </div>
     <canvas id="]] .. canvasId .. [[" oncontextmenu="event.preventDefault()"></canvas>
     <script>

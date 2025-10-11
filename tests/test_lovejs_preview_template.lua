@@ -30,4 +30,12 @@ describe("ci_preview.html_template", function()
         assertTrue(html:find('game&quot;data', 1, true) ~= nil, "game archive should escape quotes")
         assertTrue(html:find("path&gt;love.js") ~= nil, "love.js path should escape angle bracket")
     end)
+
+    it("allows the start button label to be customized", function()
+        local html = template.renderPreviewHtml({
+            startButtonLabel = "Play Tactical Demo"
+        })
+
+        assertTrue(html:find(">Play Tactical Demo<", 1, true) ~= nil, "custom start button label should be present")
+    end)
 end)

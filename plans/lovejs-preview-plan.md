@@ -2,7 +2,7 @@
 
 - **Status:** In Progress
 - **Owner:** Engineering
-- **Last Updated:** 2025-10-13
+- **Last Updated:** 2025-10-14
 
 ## High Level Overview
 Create a CI-friendly packaging pipeline that bundles the tactical battle prototype as a `.love` archive, combines it with the `love.js` runtime, and emits a browser-playable preview. The preview artifact should be accessible from pull requests and nightly builds so design collaborators can review updates without installing the native Love2D runtime.
@@ -13,6 +13,8 @@ Create a CI-friendly packaging pipeline that bundles the tactical battle prototy
 - Author reusable Lua helpers that output the HTML shell expected by the `love.js` runtime.
 - Configure GitHub Actions to run unit tests, linting, package the tactical battle project as a `.love` file, and download the `love.js` runtime.
 - Upload the assembled preview bundle as a build artifact for manual download.
+- *2025-10-14:* Upgraded the preview artifact upload step to `actions/upload-artifact@v4` to comply with GitHub's deprecation schedule.
+- *2025-10-14:* Switched the Lua installer step to `leafo/gh-actions-lua@v11` with caching disabled after GitHub's cache service began returning HTTP 400 errors during setup.
 
 ### Phase 2 - Automated Preview Publishing *(Planned)*
 - Publish the preview bundle to GitHub Pages or a static site bucket on every successful build.
