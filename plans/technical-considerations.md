@@ -11,6 +11,7 @@
 - The love.js runtime is downloaded during CI to avoid committing large binaries; the workflow keeps the version pinned so cache behaviour stays predictable.
 - Preview HTML is generated from Lua to keep configuration colocated with the rest of the codebase and enable automated tests to validate template changes.
 - Build artifacts should retain the original `game.love` archive for reproducibility and manual debugging when issues surface in the browser runtime.
+- GitHub Actions dependencies (checkout, artifact upload, etc.) must track the latest supported major versions to avoid sudden workflow failures due to deprecations.
 
 ## Rendering Constraints
 - Battlefield rendering relies on Love2D's immediate mode drawing; separation of concerns keeps drawing isolated from game state logic.
