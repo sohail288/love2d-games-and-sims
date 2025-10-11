@@ -2,12 +2,19 @@
 
 ```
 .
+.├── .github/
+.│   └── workflows/
+.│       └── lovejs-preview.yml
 ├── README.md
 ├── STRUCTURE.md
+├── ci_preview/
+│   ├── generate_preview_html.lua
+│   └── html_template.lua
 ├── homing_rocket/
 ├── path_finding/
 ├── plans/
 │   ├── project-plan.md
+│   ├── lovejs-preview-plan.md
 │   ├── tactics-battle-plan.md
 │   ├── technical-considerations.md
 │   └── narrative-world-plan.md
@@ -38,6 +45,7 @@
 │       └── default_map.lua
 └── tests/
     ├── run_tests.lua
+    ├── test_lovejs_preview_template.lua
     └── tactics_battle/
         ├── test_battlefield.lua
         ├── test_battle_system.lua

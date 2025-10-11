@@ -6,6 +6,7 @@ local format = string.format
 
 package.path = table.concat({
     "?.lua",
+    "?/init.lua",
     "tactics_battle/?.lua",
     "tactics_battle/?/init.lua",
     "tactics_battle/?/?.lua",
@@ -65,7 +66,8 @@ local testFiles = {
     "tests.tactics_battle.test_enemy_ai",
     "tests.tactics_battle.test_scenarios",
     "tests.tactics_battle.test_game",
-    "tests.tactics_battle.test_narrative_states"
+    "tests.tactics_battle.test_narrative_states",
+    "tests.test_lovejs_preview_template"
 }
 
 local total = 0

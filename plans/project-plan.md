@@ -8,6 +8,7 @@
 4. Expand content with additional unit classes, abilities, and environmental effects.
 5. Polish presentation with animations, audio, and scenario scripting.
 6. Introduce a narrative campaign loop with start menu, world map navigation, tweened travel, and dialogue-driven cutscenes. *(In Progress)*
+7. Provide CI-powered love.js preview builds so stakeholders can review tactical combat updates in a browser.
 
 ## History
 
@@ -19,4 +20,5 @@
 - *2025-10-10*: Implemented a player turn flow state machine with automated end-of-turn handling and a skip-turn shortcut.
 - *2025-10-11*: Began narrative layer rollout with dialogue system, cutscene handling, and world map planning.
 - *2025-10-12*: Added shortest-path world travel with mid-route battles and town visit menus triggered from the map.
+- *2025-10-13*: Added love.js CI preview pipeline scaffolding to publish playable builds from GitHub Actions.
 - *2025-10-13*: Introduced end-of-turn orientation selection with facing-driven critical hit modifiers for tactical combat.
