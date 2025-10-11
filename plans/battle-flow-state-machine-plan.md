@@ -1,6 +1,7 @@
 # Battle Flow State Machine Plan
 
-- **Status:** Phase 1 complete; Phase 2 orientation controls delivered with additional hooks planned.
+- **Status:** Phase 2 milestone delivered with action menu callbacks and orientation prompts; planning for broader reuse contin
+ues.
 
 ## Overview
 Establish a dedicated turn-phase state machine that orchestrates the player phase, drives automatic turn completion, and provides hooks for synchronising UI, animations, and enemy responses. The system should replace ad-hoc checks in `BattleState` with a reusable flow controller.
@@ -9,6 +10,7 @@ Establish a dedicated turn-phase state machine that orchestrates the player phas
 - **Phase 1 – Player Turn Automation (Complete):** Introduce the state machine, wire it into `BattleState`, and ensure player turns end automatically after actions or on skip input.
 - **Phase 2 – Expanded Phase Hooks (In Progress):** Expose additional callbacks for cinematics, dialogue, or tutorial prompts during the turn summary window.
     - [x] Gate turn completion behind a player-facing orientation prompt so combat modifiers can react to facing.
+    - [x] Surface ordered action availability to the UI so the battle scene can stage move/attack decisions before facing.
 - **Phase 3 – Enemy & Ally Reuse (Planned):** Evaluate extending the machine to coordinate allied NPCs or enemy phases for consistent sequencing.
 
 ## Acceptance Criteria

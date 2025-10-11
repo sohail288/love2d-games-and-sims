@@ -17,7 +17,8 @@ This repository collects small Love2D projects that explore gameplay and simulat
 
 1. Install [Love2D](https://love2d.org/).
 2. From the repository root, run `love tactics_battle`.
-3. Use the arrow keys to move the cursor, press **Space** to select the active unit, **Enter** to move to the highlighted tile, **A** to preview the attack range and strike enemies in reach. Turns now end automatically once the acting unit has no remaining actions; press **Tab** only when you want to skip any remaining options. Enemy units will automatically take their turn when highlighted in the initiative display.
+3. Use the arrow keys to move the cursor and press **Space** to open the action menu. Choose whether to move or attack first, confirm with **Enter**, then resolve the remaining action when the menu reappears. Facing selection always closes the turn, so be sure to point the unit in the direction you want to guard last.
+4. Press **Tab** to skip directly to facing if you want to end the turn early. Enemy units will automatically take their turn when highlighted in the initiative display.
 
 ### Scenario System
 

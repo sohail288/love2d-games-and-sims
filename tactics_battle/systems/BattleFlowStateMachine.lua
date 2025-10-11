@@ -32,6 +32,7 @@ function BattleFlowStateMachine.new(args)
         summaryReason = nil,
         turnEndReason = nil,
         onAwaitingInput = args.onAwaitingInput,
+        onActionMenuRequested = args.onActionMenuRequested,
         onActionComplete = args.onActionComplete,
         onTurnSummary = args.onTurnSummary,
         onTurnComplete = args.onTurnComplete,
@@ -75,22 +76,32 @@ function BattleFlowStateMachine:enterAwaitingInput()
     end
 
     self.state = "awaiting_input"
+    local actions = self:_collectAvailableActions()
+
     if self.onAwaitingInput then
         self.onAwaitingInput(self.currentUnit)
     end
 
-    if not self:hasRemainingActions() then
+    if self.onActionMenuRequested then
+        self.onActionMenuRequested(self.currentUnit, actions)
+    end
+
+    if #actions == 0 then
         self:queueSummary("no_actions")
     end
 end
 
 function BattleFlowStateMachine:hasRemainingActions()
+    return #self:_collectAvailableActions() > 0
+end
+
+function BattleFlowStateMachine:_collectAvailableActions()
     if not isPlayerUnit(self.currentUnit) then
-        return false
+        return {}
     end
 
     if not self.battleSystem or not self.battlefield then
-        return false
+        return {}
     end
 
     local unit = self.battleSystem.currentUnit
@@ -99,24 +110,26 @@ function BattleFlowStateMachine:hasRemainingActions()
     end
 
     if not unit or not unit:isAlive() then
-        return false
+        return {}
+    end
+
+    local actions = {}
+
+    if not self.battleSystem:hasActed() then
+        local targets = self.battleSystem:getAttackableTargets(unit)
+        if targets and #targets > 0 then
+            actions[#actions + 1] = "attack"
+        end
     end
 
     if not self.battleSystem:hasMoved() then
         local tiles = self.battleSystem:getReachableTiles(unit)
         if tilesContainOtherPosition(tiles, unit) then
-            return true
+            actions[#actions + 1] = "move"
         end
     end
 
-    if not self.battleSystem:hasActed() then
-        local targets = self.battleSystem:getAttackableTargets(unit)
-        if targets and #targets > 0 then
-            return true
-        end
-    end
-
-    return false
+    return actions
 end
 
 function BattleFlowStateMachine:queueSummary(reason)
