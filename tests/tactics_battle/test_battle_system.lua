@@ -5,7 +5,8 @@ local TurnManager = require("tactics_battle.systems.TurnManager")
 local BattleSystem = require("tactics_battle.systems.BattleSystem")
 
 describe("BattleSystem", function()
-    local function setupBattle()
+    local function setupBattle(options)
+        options = options or {}
         local grid = Grid.new(6, 6, 32)
         local battlefield = Battlefield.new(grid)
         local units = {
@@ -17,7 +18,13 @@ describe("BattleSystem", function()
             battlefield:addUnit(unit, unit.col, unit.row)
         end
         local turnManager = TurnManager.new(units)
-        local battleSystem = BattleSystem.new({ battlefield = battlefield, turnManager = turnManager })
+        local battleSystem = BattleSystem.new({
+            battlefield = battlefield,
+            turnManager = turnManager,
+            random = options.random or function()
+                return 1
+            end
+        })
         battleSystem:startTurn(units[1])
         return {
             grid = grid,
@@ -26,6 +33,12 @@ describe("BattleSystem", function()
             units = units,
             turnManager = turnManager
         }
+    end
+
+    local function constantRandom(value)
+        return function()
+            return value
+        end
     end
 
     describe("movement range", function()
@@ -123,6 +136,39 @@ describe("BattleSystem", function()
                 assertEquals(tiles[index].col, tile.col)
                 assertEquals(tiles[index].row, tile.row)
             end
+        end)
+
+        it("applies orientation-based critical chance modifiers", function()
+            local function runAttack(targetOrientation, randomValue)
+                local context = setupBattle({ random = constantRandom(randomValue) })
+                local battleSystem = context.battleSystem
+                local attacker = context.units[1]
+                local target = context.units[2]
+
+                context.turnManager:removeUnit(context.units[3])
+                context.battlefield:removeUnit(context.units[3])
+                context.battlefield:moveUnit(attacker, 3, 2)
+                target:setOrientation(targetOrientation)
+
+                assertTrue(battleSystem:canAttack(attacker, target), "target should be in range")
+                local result = battleSystem:attack(attacker, target)
+                return result
+            end
+
+            local front = runAttack("west", 0.1)
+            assertTrue(not front.critical, "front attack should not crit at higher roll")
+            assertEquals(front.facingRelation, "front")
+            assertEquals(front.damage, 30)
+
+            local side = runAttack("north", 0.15)
+            assertTrue(side.critical, "side attack should crit when roll within threshold")
+            assertEquals(side.facingRelation, "side")
+            assertEquals(side.damage, 45)
+
+            local back = runAttack("east", 0.35)
+            assertTrue(back.critical, "back attack should crit with higher threshold")
+            assertEquals(back.facingRelation, "back")
+            assertEquals(back.damage, 45)
         end)
     end)
 

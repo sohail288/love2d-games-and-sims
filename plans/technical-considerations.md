@@ -20,6 +20,7 @@
 - Movement range is computed with a breadth-first search over the grid while treating occupied tiles as obstacles.
 - Combat resolution removes defeated units from both the battlefield and initiative order to maintain consistent turn flow.
 - EnemyAI module evaluates reachable tiles, prioritising closer proximity to opposing units, and selects the lowest HP target when attacking to keep behaviour deterministic for testing.
+- Combat resolution now factors defender orientation into critical hit odds, and the battle system exposes an injectable RNG so unit tests can remain deterministic.
 - TurnManager exposes the ordered initiative list so that the HUD can display the active and upcoming units without mutating the underlying sequence.
 - Scenario definitions live in standalone Lua tables that expose hooks and victory/defeat evaluators; shared scenario state is passed into BattleSystem contexts so scripted objectives and HUD updates can be exercised in unit tests without Love2D.
 - Turn resolution aggregates per-action time costs, advancing a global time unit counter so scenarios can throttle expensive abilities or trigger hooks after specific durations.

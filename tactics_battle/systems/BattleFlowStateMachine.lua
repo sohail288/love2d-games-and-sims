@@ -35,7 +35,11 @@ function BattleFlowStateMachine.new(args)
         onActionComplete = args.onActionComplete,
         onTurnSummary = args.onTurnSummary,
         onTurnComplete = args.onTurnComplete,
-        onNoActionsRemaining = args.onNoActionsRemaining
+        onNoActionsRemaining = args.onNoActionsRemaining,
+        onOrientationPrompt = args.onOrientationPrompt,
+        onOrientationComplete = args.onOrientationComplete,
+        pendingOrientation = false,
+        orientationReason = nil
     }
 
     return setmetatable(instance, BattleFlowStateMachine)
@@ -48,6 +52,8 @@ function BattleFlowStateMachine:_resetTurnState()
     self.pendingTurnEnd = false
     self.summaryReason = nil
     self.turnEndReason = nil
+    self.pendingOrientation = false
+    self.orientationReason = nil
 end
 
 function BattleFlowStateMachine:beginTurn(unit)
@@ -124,6 +130,23 @@ function BattleFlowStateMachine:queueSummary(reason)
 
     if reason == "no_actions" or reason == "skipped" then
         self.turnEndReason = reason
+    end
+end
+
+function BattleFlowStateMachine:_requireOrientation(reason)
+    if not isPlayerUnit(self.currentUnit) then
+        return
+    end
+    if self.pendingOrientation then
+        return
+    end
+
+    self.state = "choosing_orientation"
+    self.pendingOrientation = true
+    self.orientationReason = reason or self.turnEndReason or "completed"
+
+    if self.onOrientationPrompt then
+        self.onOrientationPrompt(self.currentUnit, self.orientationReason)
     end
 end
 
@@ -211,20 +234,33 @@ function BattleFlowStateMachine:_processSummary()
     end
 
     if self.turnEndReason then
-        self:_transitionToEndingTurn(self.turnEndReason)
+        self:_requireOrientation(self.turnEndReason)
         return
     end
 
     if self:hasRemainingActions() then
         self:enterAwaitingInput()
-    else
-        self:queueSummary("no_actions")
+        return
     end
+
+    if self.onNoActionsRemaining and reason ~= "no_actions" then
+        self.onNoActionsRemaining(self.currentUnit)
+    end
+
+    if not self.turnEndReason then
+        self.turnEndReason = "no_actions"
+    end
+
+    self:_requireOrientation(self.turnEndReason)
 end
 
 function BattleFlowStateMachine:update(_dt)
     while self.pendingSummary do
         self:_processSummary()
+    end
+
+    if self.pendingOrientation then
+        return
     end
 
     if self.pendingTurnEnd then
@@ -238,6 +274,25 @@ function BattleFlowStateMachine:update(_dt)
             self.onTurnComplete(finishedUnit, reason)
         end
     end
+end
+
+function BattleFlowStateMachine:onOrientationChosen(orientation)
+    if not isPlayerUnit(self.currentUnit) then
+        return
+    end
+    if not self.pendingOrientation then
+        return
+    end
+
+    self.pendingOrientation = false
+    local reason = self.orientationReason or self.turnEndReason or "completed"
+    self.orientationReason = nil
+
+    if self.onOrientationComplete then
+        self.onOrientationComplete(self.currentUnit, orientation, reason)
+    end
+
+    self:_transitionToEndingTurn(reason)
 end
 
 return BattleFlowStateMachine
