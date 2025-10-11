@@ -26,6 +26,30 @@ local function decodeKey(key)
     return tonumber(col), tonumber(row)
 end
 
+local oppositeDirections = {
+    north = "south",
+    south = "north",
+    east = "west",
+    west = "east"
+}
+
+local function directionBetween(from, to)
+    local dx = (to.col or 0) - (from.col or 0)
+    local dy = (to.row or 0) - (from.row or 0)
+    if math.abs(dx) >= math.abs(dy) then
+        if dx >= 0 then
+            return "east"
+        else
+            return "west"
+        end
+    end
+    if dy >= 0 then
+        return "south"
+    else
+        return "north"
+    end
+end
+
 function BattleSystem.new(args)
     assert(args and args.battlefield, "battlefield required")
     assert(args.turnManager, "turn manager required")
@@ -39,7 +63,12 @@ function BattleSystem.new(args)
         outcome = nil,
         scenario = args.scenario,
         scenarioState = args.scenarioState,
-        turnTimeCost = 1
+        turnTimeCost = 1,
+        random = args.random or function()
+            return math.random()
+        end,
+        criticalChances = args.criticalChances or { front = 0.05, side = 0.2, back = 0.4 },
+        criticalMultiplier = args.criticalMultiplier or 1.5
     }
 
     return setmetatable(instance, BattleSystem)
@@ -207,6 +236,28 @@ function BattleSystem:canAttack(attacker, target)
     return manhattan(attacker, target) <= attacker.attackRange
 end
 
+function BattleSystem:_relativeFacing(targetOrientation, attackDirection)
+    local orientation = targetOrientation or "south"
+    if attackDirection == orientation then
+        return "front"
+    end
+    if attackDirection == oppositeDirections[orientation] then
+        return "back"
+    end
+    return "side"
+end
+
+function BattleSystem:_criticalChance(target, attacker)
+    if not target or not attacker then
+        return 0, "front"
+    end
+    local attackDirection = directionBetween(target, attacker)
+    local relation = self:_relativeFacing(target:getOrientation(), attackDirection)
+    local chances = self.criticalChances or {}
+    local chance = chances[relation] or 0
+    return chance, relation
+end
+
 function BattleSystem:_finalizeTarget(target)
     if not target:isAlive() then
         self.battlefield:removeUnit(target)
@@ -221,7 +272,15 @@ function BattleSystem:attack(attacker, target)
     assert(self.currentUnit and attacker.id == self.currentUnit.id, "attacker must be current unit")
     assert(self:canAttack(attacker, target), "attack not allowed")
 
-    target:takeDamage(attacker.attackPower)
+    local chance, relation = self:_criticalChance(target, attacker)
+    local roll = self.random and self.random() or math.random()
+    local isCritical = roll <= chance
+    local damage = attacker.attackPower
+    if isCritical then
+        damage = math.floor(damage * (self.criticalMultiplier or 1.5) + 0.5)
+    end
+
+    target:takeDamage(damage)
     local defeated = not target:isAlive()
     self.acted = true
     local cost = self:getActionTimeCost("attack", attacker)
@@ -231,8 +290,10 @@ function BattleSystem:attack(attacker, target)
     self:_finalizeTarget(target)
     return {
         target = target,
-        damage = attacker.attackPower,
-        defeated = defeated
+        damage = damage,
+        defeated = defeated,
+        critical = isCritical,
+        facingRelation = relation
     }
 end
 

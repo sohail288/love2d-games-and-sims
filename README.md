@@ -8,6 +8,7 @@ This repository collects small Love2D projects that explore gameplay and simulat
     - Turn resolution advances a global time unit counter, and actions can declare multi-unit time costs so scenarios can pace abilities and scripted events.
     - Unit movement now tween between tiles via `love.update(dt)` to prepare for richer animation while preserving deterministic logic in the battle system.
     - Scene-driven architecture powered by a reusable game state machine keeps the battle flow isolated from future menus, pause screens, and world navigation.
+    - After exhausting actions a facing-selection prompt lets you choose orientation; attackers striking from the sides or rear gain higher critical odds, rewarding careful positioning.
     - Narrative layer adds a start menu, dialogue-driven cutscenes, and a world map linking two towns with a battlefield scenario.
 - `homing_rocket/`: Demonstrates steering behaviour for a homing projectile.
 - `path_finding/`: Visualizes grid-based pathfinding with interactive menus.

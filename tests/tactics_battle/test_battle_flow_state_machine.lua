@@ -13,7 +13,9 @@ local function setupBattle()
     battlefield:addUnit(ally, ally.col, ally.row)
     battlefield:addUnit(enemy, enemy.col, enemy.row)
     local turnManager = TurnManager.new({ ally, enemy })
-    local battleSystem = BattleSystem.new({ battlefield = battlefield, turnManager = turnManager })
+    local battleSystem = BattleSystem.new({ battlefield = battlefield, turnManager = turnManager, random = function()
+        return 1
+    end })
     battleSystem:startTurn(ally)
 
     return {
@@ -43,6 +45,12 @@ describe("BattleFlowStateMachine", function()
             onNoActionsRemaining = function()
                 events[#events + 1] = { "phase", "no_actions" }
             end,
+            onOrientationPrompt = function(_, reason)
+                events[#events + 1] = { "orientation", reason }
+            end,
+            onOrientationComplete = function(_, orientation, reason)
+                events[#events + 1] = { "orientation_complete", orientation, reason }
+            end,
             onTurnComplete = function(_, reason)
                 events[#events + 1] = { "turn_complete", reason }
             end
@@ -71,8 +79,18 @@ describe("BattleFlowStateMachine", function()
         assertEquals(events[4][2], "attack")
         assertEquals(events[5][1], "phase")
         assertEquals(events[5][2], "no_actions")
-        assertEquals(events[6][1], "turn_complete")
+        assertEquals(events[6][1], "orientation")
         assertEquals(events[6][2], "no_actions")
+
+        context.ally:setOrientation("west")
+        machine:onOrientationChosen("west")
+        machine:update(0)
+
+        assertEquals(events[7][1], "orientation_complete")
+        assertEquals(events[7][2], "west")
+        assertEquals(events[7][3], "no_actions")
+        assertEquals(events[8][1], "turn_complete")
+        assertEquals(events[8][2], "no_actions")
         assertEquals(machine.state, "idle")
     end)
 
@@ -83,6 +101,12 @@ describe("BattleFlowStateMachine", function()
         local machine = BattleFlowStateMachine.new({
             battleSystem = context.battleSystem,
             battlefield = context.battlefield,
+            onOrientationPrompt = function(_, reason)
+                events[#events + 1] = { "orientation", reason }
+            end,
+            onOrientationComplete = function(_, orientation, reason)
+                events[#events + 1] = { "orientation_complete", orientation, reason }
+            end,
             onTurnComplete = function(_, reason)
                 events[#events + 1] = { "turn_complete", reason }
             end
@@ -92,9 +116,18 @@ describe("BattleFlowStateMachine", function()
         machine:skipTurn()
         machine:update(0)
 
-        assertEquals(#events, 1)
-        assertEquals(events[1][1], "turn_complete")
+        assertEquals(events[1][1], "orientation")
         assertEquals(events[1][2], "skipped")
+
+        context.ally:setOrientation("south")
+        machine:onOrientationChosen("south")
+        machine:update(0)
+
+        assertEquals(events[2][1], "orientation_complete")
+        assertEquals(events[2][2], "south")
+        assertEquals(events[2][3], "skipped")
+        assertEquals(events[3][1], "turn_complete")
+        assertEquals(events[3][2], "skipped")
         assertEquals(machine.state, "idle")
     end)
 
@@ -106,15 +139,26 @@ describe("BattleFlowStateMachine", function()
         context.battlefield:moveUnit(context.enemy, context.enemy.col, context.enemy.row)
 
         local result = nil
+        local orientationReason = nil
         local machine = BattleFlowStateMachine.new({
             battleSystem = context.battleSystem,
             battlefield = context.battlefield,
+            onOrientationPrompt = function(_, reason)
+                orientationReason = reason
+            end,
             onTurnComplete = function(_, reason)
                 result = reason
             end
         })
 
         machine:beginTurn(context.ally)
+        machine:update(0)
+
+        assertEquals(orientationReason, "no_actions")
+        assertEquals(result, nil)
+
+        context.ally:setOrientation("north")
+        machine:onOrientationChosen("north")
         machine:update(0)
 
         assertEquals(result, "no_actions")

@@ -1,3 +1,10 @@
+local validOrientations = {
+    north = true,
+    south = true,
+    east = true,
+    west = true
+}
+
 local Unit = {}
 Unit.__index = Unit
 
@@ -5,6 +12,10 @@ function Unit.new(args)
     assert(type(args) == "table", "args table required")
     assert(args.id, "unit id required")
 
+    local orientation = args.orientation or "south"
+    if args.orientation then
+        assert(validOrientations[orientation], "invalid orientation")
+    end
     local unit = {
         id = args.id,
         name = args.name or "Unit",
@@ -19,7 +30,8 @@ function Unit.new(args)
         row = args.row or 1,
         visualCol = args.col or 1,
         visualRow = args.row or 1,
-        timeCosts = args.timeCosts
+        timeCosts = args.timeCosts,
+        orientation = orientation
     }
 
     return setmetatable(unit, Unit)
@@ -51,6 +63,15 @@ end
 
 function Unit:isEnemyOf(other)
     return other and self.faction ~= other.faction
+end
+
+function Unit:setOrientation(orientation)
+    assert(validOrientations[orientation], "invalid orientation")
+    self.orientation = orientation
+end
+
+function Unit:getOrientation()
+    return self.orientation or "south"
 end
 
 return Unit
