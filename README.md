@@ -48,6 +48,27 @@ A lightweight lint step checks Lua syntax:
 find . -name '*.lua' -not -path './vendor/*' -print0 | xargs -0 -n1 luac -p
 ```
 
+### CI love.js Preview
+
+GitHub Actions packages the tactical battle project as a `.love` archive, pairs it with the `love.js` runtime, and uploads the bundle as a downloadable artifact on each push or pull request. The workflow lives at `.github/workflows/lovejs-preview.yml` and performs the following:
+
+1. Run Lua unit tests and linting to guard the build.
+2. Zip `tactics_battle/` into `game.love`.
+3. Download the `love.js` 11.4 runtime and drop the generated `index.html` shell into the bundle.
+4. Upload the resulting directory as the `lovejs-preview` artifact.
+
+To reproduce the preview locally:
+
+```bash
+mkdir -p build/lovejs
+cd tactics_battle && zip -9 -r ../build/tactics_battle.love . && cd ..
+curl -L -o build/lovejs-runtime.zip https://github.com/TannerRogalsky/love.js/releases/download/11.4/love.js-11.4.zip
+unzip -o build/lovejs-runtime.zip -d build/lovejs
+mv build/lovejs/love.js-11.4/* build/lovejs/ && rm -rf build/lovejs/love.js-11.4
+cp build/tactics_battle.love build/lovejs/game.love
+lua ci_preview/generate_preview_html.lua --output build/lovejs/index.html
+```
+
 ### Plans and Documentation
 
 - `plans/project-plan.md` tracks the roadmap and history of features.
