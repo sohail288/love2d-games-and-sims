@@ -19,3 +19,4 @@
 - *2025-10-10*: Implemented a player turn flow state machine with automated end-of-turn handling and a skip-turn shortcut.
 - *2025-10-11*: Began narrative layer rollout with dialogue system, cutscene handling, and world map planning.
 - *2025-10-12*: Added shortest-path world travel with mid-route battles and town visit menus triggered from the map.
+- *2025-10-13*: Introduced end-of-turn orientation selection with facing-driven critical hit modifiers for tactical combat.

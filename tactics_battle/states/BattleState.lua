@@ -11,6 +11,27 @@ local Scenarios = require("tactics_battle.scenarios.init")
 local BattleState = {}
 BattleState.__index = BattleState
 
+local orientationVectors = {
+    north = { dx = 0, dy = -1 },
+    south = { dx = 0, dy = 1 },
+    east = { dx = 1, dy = 0 },
+    west = { dx = -1, dy = 0 }
+}
+
+local orientationLabels = {
+    north = "North",
+    south = "South",
+    east = "East",
+    west = "West"
+}
+
+local keyOrientationMap = {
+    up = "north",
+    down = "south",
+    left = "west",
+    right = "east"
+}
+
 local function newScene()
     return {
         grid = nil,
@@ -35,7 +56,8 @@ local function newScene()
         movementAnimation = nil,
         movementDuration = 0.18,
         flowMachine = nil,
-        onComplete = nil
+        onComplete = nil,
+        orientationSelection = nil
     }
 end
 
@@ -82,6 +104,49 @@ local function refreshHighlights(scene)
         scene.moveTiles = scene.battleSystem:getReachableTiles(scene.selectedUnit)
     end
     refreshAttackTiles(scene)
+end
+
+local function beginOrientationSelection(scene, unit, reason)
+    if not unit then
+        return
+    end
+
+    scene.orientationSelection = {
+        unit = unit,
+        direction = unit.getOrientation and unit:getOrientation() or unit.orientation or "south",
+        reason = reason
+    }
+    scene.moveTiles = nil
+    clearAttackPreview(scene)
+    if scene.cursor then
+        scene.cursor:setPosition(unit.col, unit.row)
+    end
+end
+
+local function setOrientationDirection(scene, direction)
+    if not scene.orientationSelection then
+        return
+    end
+    if direction then
+        scene.orientationSelection.direction = direction
+    end
+end
+
+local function confirmOrientationSelection(scene)
+    local selection = scene.orientationSelection
+    if not selection or not selection.unit then
+        return
+    end
+    if not scene.flowMachine then
+        selection.unit:setOrientation(selection.direction)
+        scene.orientationSelection = nil
+        return
+    end
+
+    local direction = selection.direction or selection.unit:getOrientation()
+    selection.unit:setOrientation(direction)
+    scene.orientationSelection = nil
+    scene.flowMachine:onOrientationChosen(direction)
 end
 
 local function advanceTime(scene, cost)
@@ -285,6 +350,7 @@ local function beginTurn(scene, unit)
     scene.selectedUnit = nil
     scene.moveTiles = nil
     clearAttackPreview(scene)
+    scene.orientationSelection = nil
 
     if scene.cursor then
         scene.cursor:setPosition(unit.col, unit.row)
@@ -323,6 +389,7 @@ local function endTurn(scene)
     scene.selectedUnit = nil
     scene.moveTiles = nil
     clearAttackPreview(scene)
+    scene.orientationSelection = nil
     if not scene.battleSystem then
         return
     end
@@ -390,6 +457,12 @@ local function initializeScenario(scene, scenario)
         end,
         onNoActionsRemaining = function()
             refreshHighlights(scene)
+        end,
+        onOrientationPrompt = function(unit, reason)
+            beginOrientationSelection(scene, unit, reason)
+        end,
+        onOrientationComplete = function()
+            scene.orientationSelection = nil
         end,
         onTurnComplete = function()
             endTurn(scene)
@@ -490,7 +563,7 @@ local function unitColor(unit)
     end
 end
 
-local function drawUnits(grid, battlefield, selectedUnit)
+local function drawUnits(grid, battlefield, selectedUnit, orientationSelection)
     local offsetX, offsetY = centerOffsets(grid)
     for _, unit in ipairs(battlefield.units) do
         local col, row = unit:getRenderPosition()
@@ -503,6 +576,20 @@ local function drawUnits(grid, battlefield, selectedUnit)
             love.graphics.setColor(1, 1, 1)
             love.graphics.setLineWidth(2)
             love.graphics.rectangle("line", x + 4, y + 4, grid.tileSize - 8, grid.tileSize - 8, 6, 6)
+        end
+        local orientation = unit.getOrientation and unit:getOrientation() or unit.orientation
+        local vector = orientationVectors[orientation or "south"]
+        if vector then
+            local arrowLength = grid.tileSize / 2 - 8
+            local centerX = x + grid.tileSize / 2
+            local centerY = y + grid.tileSize / 2
+            if orientationSelection and orientationSelection.unit and orientationSelection.unit.id == unit.id then
+                love.graphics.setColor(1, 0.9, 0.4)
+            else
+                love.graphics.setColor(1, 0.85, 0.2)
+            end
+            love.graphics.setLineWidth(2)
+            love.graphics.line(centerX, centerY, centerX + vector.dx * arrowLength, centerY + vector.dy * arrowLength)
         end
         love.graphics.setColor(1, 1, 1)
         love.graphics.print(unit.name, x + 8, y + grid.tileSize - 20)
@@ -580,7 +667,15 @@ local function drawHud(scene)
         love.graphics.print("Turn Order: " .. table.concat(labels, " -> "), 16, y)
     end
 
-    love.graphics.print("Controls: Arrows move cursor, Space select, Enter move, A attack, Tab skip turn (auto end)", 16, love.graphics.getHeight() - 32)
+    local bottomY = love.graphics.getHeight() - 32
+    if scene.orientationSelection then
+        local selection = scene.orientationSelection
+        local label = orientationLabels[selection.direction] or selection.direction or "South"
+        love.graphics.print(string.format("Choose facing: %s", label), 16, bottomY - 24)
+        love.graphics.print("Use arrows to change, Enter to confirm. Facing affects critical hits.", 16, bottomY)
+    else
+        love.graphics.print("Controls: Arrows move cursor, Space select, Enter move, A attack, Tab skip turn (auto end)", 16, bottomY)
+    end
 end
 
 local function selectUnitAtCursor(scene)
@@ -703,7 +798,7 @@ function BattleState:render(_game)
     drawGrid(self.scene.grid)
     drawHighlightTiles(self.scene.grid, self.scene.moveTiles, { 0.2, 0.5, 0.8, 0.25 })
     drawHighlightTiles(self.scene.grid, self.scene.attackTiles, { 0.9, 0.3, 0.3, 0.25 })
-    drawUnits(self.scene.grid, self.scene.battlefield, self.scene.selectedUnit)
+    drawUnits(self.scene.grid, self.scene.battlefield, self.scene.selectedUnit, self.scene.orientationSelection)
     drawCursor(self.scene.grid, self.scene.cursor)
     drawHud(self.scene)
 end
@@ -711,6 +806,16 @@ end
 function BattleState:keypressed(game, key)
     if key == "escape" then
         love.event.quit()
+        return
+    end
+
+    if self.scene.orientationSelection then
+        local direction = keyOrientationMap[key]
+        if direction then
+            setOrientationDirection(self.scene, direction)
+        elseif key == "return" or key == "kpenter" or key == "space" or key == "tab" then
+            confirmOrientationSelection(self.scene)
+        end
         return
     end
 

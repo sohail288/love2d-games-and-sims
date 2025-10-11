@@ -9,6 +9,23 @@ local function manhattan(a, b)
     return math.abs(a.col - b.col) + math.abs(a.row - b.row)
 end
 
+local function directionTo(from, to)
+    local dx = (to.col or 0) - (from.col or 0)
+    local dy = (to.row or 0) - (from.row or 0)
+    if math.abs(dx) >= math.abs(dy) then
+        if dx >= 0 then
+            return "east"
+        else
+            return "west"
+        end
+    end
+    if dy >= 0 then
+        return "south"
+    else
+        return "north"
+    end
+end
+
 local function aliveOpponents(battlefield, faction)
     local opponents = {}
     local groups = battlefield:unitsByFaction()
@@ -22,6 +39,19 @@ local function aliveOpponents(battlefield, faction)
         end
     end
     return opponents
+end
+
+local function closestOpponent(unit, opponents)
+    local nearest = nil
+    local bestDistance = math.huge
+    for _, opponent in ipairs(opponents) do
+        local distance = manhattan(unit, opponent)
+        if distance < bestDistance then
+            bestDistance = distance
+            nearest = opponent
+        end
+    end
+    return nearest
 end
 
 local function selectLowestHpTarget(targets)
@@ -87,6 +117,10 @@ function EnemyAI:takeTurn(unit)
     if #attackable > 0 then
         local target = selectLowestHpTarget(attackable)
         battleSystem:attack(unit, target)
+        local facing = directionTo(unit, target)
+        if facing then
+            unit:setOrientation(facing)
+        end
         result.attacked = true
         result.target = target
         return result
@@ -100,19 +134,36 @@ function EnemyAI:takeTurn(unit)
     local reachable = battleSystem:getReachableTiles(unit)
     local destination = chooseDestination(reachable, opponents)
     if destination and (destination.col ~= unit.col or destination.row ~= unit.row) then
+        local startCol, startRow = unit.col, unit.row
         local path = battleSystem:findPath(unit, destination.col, destination.row)
         battleSystem:move(unit, destination.col, destination.row)
         result.moved = true
         result.movedTo = copyPosition(destination)
         result.path = path
+        local moveFacing = directionTo({ col = startCol, row = startRow }, destination)
+        if moveFacing then
+            unit:setOrientation(moveFacing)
+        end
     end
 
     attackable = battleSystem:getAttackableTargets(unit)
     if #attackable > 0 then
         local target = selectLowestHpTarget(attackable)
         battleSystem:attack(unit, target)
+        local facing = directionTo(unit, target)
+        if facing then
+            unit:setOrientation(facing)
+        end
         result.attacked = true
         result.target = target
+    elseif result.moved and #opponents > 0 then
+        local closest = closestOpponent(unit, opponents)
+        if closest then
+            local facing = directionTo(unit, closest)
+            if facing then
+                unit:setOrientation(facing)
+            end
+        end
     end
 
     return result

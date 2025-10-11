@@ -18,7 +18,13 @@ local function setupScenario(args)
     end
 
     local turnManager = TurnManager.new(units)
-    local battleSystem = BattleSystem.new({ battlefield = battlefield, turnManager = turnManager })
+    local battleSystem = BattleSystem.new({
+        battlefield = battlefield,
+        turnManager = turnManager,
+        random = function()
+            return 1
+        end
+    })
     battleSystem:startTurn(enemy)
     local ai = EnemyAI.new({ battleSystem = battleSystem })
 
