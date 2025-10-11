@@ -46,7 +46,8 @@ lua tests/run_tests.lua
 A lightweight lint step checks Lua syntax:
 
 ```bash
-find . -type f -name '*.lua' -not -path './vendor/*' -not -path './.lua/*' -print0 | xargs -0 -n1 luac -p
+LUAC_EXEC=$(lua ci_preview/detect_luac.lua)
+find . -type f -name '*.lua' -not -path './vendor/*' -not -path './.lua/*' -print0 | xargs -0 -n1 "$LUAC_EXEC" -p
 ```
 
 ### CI love.js Preview

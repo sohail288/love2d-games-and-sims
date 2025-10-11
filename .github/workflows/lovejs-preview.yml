@@ -25,7 +25,9 @@ jobs:
         run: lua tests/run_tests.lua
 
       - name: Lint Lua sources
-        run: find . -type f -name '*.lua' -not -path './vendor/*' -not -path './.lua/*' -print0 | xargs -0 -n1 luac -p
+        run: |
+          LUAC_EXEC=$(lua ci_preview/detect_luac.lua)
+          find . -type f -name '*.lua' -not -path './vendor/*' -not -path './.lua/*' -print0 | xargs -0 -n1 "$LUAC_EXEC" -p
 
       - name: Prepare build directories
         run: |

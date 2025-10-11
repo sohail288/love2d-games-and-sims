@@ -17,6 +17,7 @@ Create a CI-friendly packaging pipeline that bundles the tactical battle prototy
 - *2025-10-14:* Switched the Lua installer step to `leafo/gh-actions-lua@v11` with caching disabled after GitHub's cache service began returning HTTP 400 errors during setup.
 - *2025-10-15:* Tightened the lint discovery command to only emit Lua source files after the Lua installer action started dropping a `.lua` directory into the workspace.
 - *2025-10-15:* Added an explicit `-not -path './.lua/*'` guard to skip the contents of installer-created `.lua` directories entirely.
+- *2025-10-16:* Introduced a `detect_luac` helper so the lint step resolves the installed Lua compiler path before invoking syntax checks.
 
 ### Phase 2 - Automated Preview Publishing *(Planned)*
 - Publish the preview bundle to GitHub Pages or a static site bucket on every successful build.
