@@ -98,6 +98,8 @@ function StartMenuState:keypressed(game, key)
         if option and option.action then
             option.action(game)
         end
+    elseif key == "d" then
+        game:changeState("dev_menu")
     end
 end
 
