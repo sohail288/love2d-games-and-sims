@@ -6,13 +6,68 @@ local DevMenuState = {}
 DevMenuState.__index = DevMenuState
 
 local schemas = {
-    Theme = { type = "object", properties = { theme = { type = "string", description = "A brief summary of the game's central theme." } } },
-    Setting = { type = "object", properties = { setting = { type = "string", description = "A description of the game's setting." } } },
-    World = { type = "object", properties = { world_summary = { type = "string", description = "A summary of the game world." } } },
-    ["Main Character Bios"] = { type = "object", properties = { characters = { type = "array", items = { type = "object", properties = { name = { type = "string" }, bio = { type = "string" } } } } } },
-    Story = { type = "object", properties = { story_outline = { type = "string", description = "An outline of the main story." } } },
-    Journey = { type = "object", properties = { journey_details = { type = "string", description = "Details about the player's journey." } } },
-    Interactions = { type = "object", properties = { interactions = { type = "array", items = { type = "object", properties = { character = { type = "string" }, dialogue = { type = "string" } } } } } }
+    Theme = {
+        type = "object",
+        properties = { theme = { type = "string", description = "A brief summary of the game's central theme." } },
+        required = { "theme" },
+        additionalProperties = false
+    },
+    Setting = {
+        type = "object",
+        properties = { setting = { type = "string", description = "A description of the game's setting." } },
+        required = { "setting" },
+        additionalProperties = false
+    },
+    World = {
+        type = "object",
+        properties = { world_summary = { type = "string", description = "A summary of the game world." } },
+        required = { "world_summary" },
+        additionalProperties = false
+    },
+    ["Main Character Bios"] = {
+        type = "object",
+        properties = {
+            characters = {
+                type = "array",
+                items = {
+                    type = "object",
+                    properties = { name = { type = "string" }, bio = { type = "string" } },
+                    required = { "name", "bio" },
+                    additionalProperties = false
+                }
+            }
+        },
+        required = { "characters" },
+        additionalProperties = false
+    },
+    Story = {
+        type = "object",
+        properties = { story_outline = { type = "string", description = "An outline of the main story." } },
+        required = { "story_outline" },
+        additionalProperties = false
+    },
+    Journey = {
+        type = "object",
+        properties = { journey_details = { type = "string", description = "Details about the player's journey." } },
+        required = { "journey_details" },
+        additionalProperties = false
+    },
+    Interactions = {
+        type = "object",
+        properties = {
+            interactions = {
+                type = "array",
+                items = {
+                    type = "object",
+                    properties = { character = { type = "string" }, dialogue = { type = "string" } },
+                    required = { "character", "dialogue" },
+                    additionalProperties = false
+                }
+            }
+        },
+        required = { "interactions" },
+        additionalProperties = false
+    }
 }
 
 function DevMenuState.new()
@@ -127,7 +182,7 @@ function DevMenuState:keypressed(game, key)
         local prompt = context_prompt .. "\nNow, generate the " .. step .. "."
 
         local schema = schemas[step]
-        local response = self.apiClient:generate_text(prompt, schema)
+        local response = self.apiClient:generate_text(prompt, schema, step)
         if response and response.choices and response.choices[1] then
             local content = response.choices[1].message.content
             local success, decoded_json = pcall(dkjson.decode, content)

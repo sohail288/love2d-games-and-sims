@@ -16,7 +16,7 @@ function ApiClient.new()
     return self
 end
 
-function ApiClient:generate_text(prompt, schema)
+function ApiClient:generate_text(prompt, schema, step_name)
     local headers = {
         ["Content-Type"] = "application/json",
         ["Authorization"] = "Bearer " .. API_KEY
@@ -30,7 +30,11 @@ function ApiClient:generate_text(prompt, schema)
         },
         response_format = {
             type = "json_schema",
-            json_schema = schema
+            json_schema = {
+                name = step_name,
+                strict = true,
+                schema = schema
+            }
         }
     }
 
