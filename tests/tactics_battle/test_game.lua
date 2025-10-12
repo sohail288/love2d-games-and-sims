@@ -126,6 +126,8 @@ describe("BattleState", function()
 
         battleState:keypressed(game, "tab")
         battleState:update(game, 0)
+        battleState:keypressed(game, "return")
+        battleState:update(game, 0)
         assertTrue(scene.timeUnits >= 1, "ending a turn should increase time units")
     end)
 end)

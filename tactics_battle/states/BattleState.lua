@@ -32,6 +32,111 @@ local keyOrientationMap = {
     right = "east"
 }
 
+local actionLabels = {
+    attack = "Attack",
+    move = "Move",
+    skip = "Skip Turn"
+}
+
+local clearAttackPreview
+local refreshAttackTiles
+
+local function clearActionMenu(scene)
+    scene.actionMenu = nil
+end
+
+local function openActionMenu(scene, unit, actions)
+    scene.activeAction = nil
+    scene.availableActions = actions
+
+    if not actions or #actions == 0 then
+        clearActionMenu(scene)
+        return
+    end
+
+    local menu = {
+        unit = unit,
+        items = {},
+        selectedIndex = 1,
+        step = scene.turnStep or 1,
+        actions = actions
+    }
+
+    local seen = {}
+    for _, actionId in ipairs(actions) do
+        if actionLabels[actionId] and not seen[actionId] then
+            menu.items[#menu.items + 1] = { id = actionId, label = actionLabels[actionId] }
+            seen[actionId] = true
+        end
+    end
+
+    menu.items[#menu.items + 1] = { id = "skip", label = actionLabels.skip }
+
+    if #menu.items == 0 then
+        clearActionMenu(scene)
+        return
+    end
+
+    scene.actionMenu = menu
+    clearAttackPreview(scene)
+    scene.moveTiles = nil
+
+    if scene.cursor and unit then
+        scene.cursor:setPosition(unit.col, unit.row)
+    end
+end
+
+local function adjustActionMenuSelection(scene, delta)
+    local menu = scene.actionMenu
+    if not menu or not menu.items or #menu.items == 0 then
+        return
+    end
+
+    local count = #menu.items
+    local index = ((menu.selectedIndex - 1 + delta) % count) + 1
+    menu.selectedIndex = index
+end
+
+local function confirmActionMenuSelection(scene)
+    local menu = scene.actionMenu
+    if not menu or not menu.items then
+        return
+    end
+
+    local choice = menu.items[menu.selectedIndex]
+    if not choice then
+        return
+    end
+
+    if choice.id == "skip" then
+        clearActionMenu(scene)
+        scene.availableActions = nil
+        scene.activeAction = nil
+        if scene.flowMachine then
+            scene.flowMachine:skipTurn()
+        end
+        return
+    end
+
+    local unit = scene.selectedUnit
+    if not unit then
+        clearActionMenu(scene)
+        return
+    end
+
+    clearActionMenu(scene)
+    scene.activeAction = { type = choice.id, step = menu.step }
+
+    if choice.id == "move" then
+        scene.attackPreview = false
+        refreshHighlights(scene)
+    elseif choice.id == "attack" then
+        scene.attackPreview = true
+        refreshAttackTiles(scene)
+        scene.moveTiles = { { col = unit.col, row = unit.row } }
+    end
+end
+
 local function newScene()
     return {
         grid = nil,
@@ -57,7 +162,11 @@ local function newScene()
         movementDuration = 0.18,
         flowMachine = nil,
         onComplete = nil,
-        orientationSelection = nil
+        orientationSelection = nil,
+        actionMenu = nil,
+        activeAction = nil,
+        turnStep = 1,
+        availableActions = nil
     }
 end
 
@@ -69,12 +178,12 @@ local function updateTurnOrder(scene)
     scene.turnOrder = scene.turnManager:getTurnOrder()
 end
 
-local function clearAttackPreview(scene)
+clearAttackPreview = function(scene)
     scene.attackPreview = false
     scene.attackTiles = nil
 end
 
-local function refreshAttackTiles(scene)
+refreshAttackTiles = function(scene)
     if not scene.selectedUnit or not scene.battleSystem then
         clearAttackPreview(scene)
         return
@@ -98,10 +207,19 @@ local function refreshHighlights(scene)
         clearAttackPreview(scene)
         return
     end
-    if scene.battleSystem:hasMoved() then
+    local activeType = scene.activeAction and scene.activeAction.type or nil
+    if activeType == "attack" then
         scene.moveTiles = { { col = scene.selectedUnit.col, row = scene.selectedUnit.row } }
+        scene.attackPreview = true
     else
-        scene.moveTiles = scene.battleSystem:getReachableTiles(scene.selectedUnit)
+        if scene.battleSystem:hasMoved() then
+            scene.moveTiles = { { col = scene.selectedUnit.col, row = scene.selectedUnit.row } }
+        else
+            scene.moveTiles = scene.battleSystem:getReachableTiles(scene.selectedUnit)
+        end
+        if activeType ~= "attack" then
+            scene.attackPreview = false
+        end
     end
     refreshAttackTiles(scene)
 end
@@ -118,6 +236,9 @@ local function beginOrientationSelection(scene, unit, reason)
     }
     scene.moveTiles = nil
     clearAttackPreview(scene)
+    clearActionMenu(scene)
+    scene.activeAction = nil
+    scene.availableActions = nil
     if scene.cursor then
         scene.cursor:setPosition(unit.col, unit.row)
     end
@@ -347,10 +468,14 @@ local function beginTurn(scene, unit)
         scene.battleSystem:startTurn(unit)
     end
 
-    scene.selectedUnit = nil
+    scene.selectedUnit = unit
     scene.moveTiles = nil
     clearAttackPreview(scene)
     scene.orientationSelection = nil
+    clearActionMenu(scene)
+    scene.activeAction = nil
+    scene.availableActions = nil
+    scene.turnStep = 1
 
     if scene.cursor then
         scene.cursor:setPosition(unit.col, unit.row)
@@ -418,6 +543,10 @@ local function initializeScenario(scene, scenario)
     scene.attackPreview = false
     scene.timeUnits = 0
     scene.movementAnimation = nil
+    scene.actionMenu = nil
+    scene.activeAction = nil
+    scene.availableActions = nil
+    scene.turnStep = 1
 
     if not scenario or not scenario.grid then
         return
@@ -450,6 +579,9 @@ local function initializeScenario(scene, scenario)
         battlefield = scene.battlefield,
         onAwaitingInput = function()
             refreshHighlights(scene)
+        end,
+        onActionMenuRequested = function(unit, actions)
+            openActionMenu(scene, unit, actions)
         end,
         onActionComplete = function()
             evaluateBattleState(scene)
@@ -498,6 +630,10 @@ end
 local function enterAttackPreview(scene)
     local unit = ensureCurrentSelection(scene)
     if not unit or not scene.battleSystem then
+        return nil
+    end
+
+    if scene.activeAction and scene.activeAction.type ~= "attack" then
         return nil
     end
 
@@ -578,6 +714,9 @@ local function drawUnits(grid, battlefield, selectedUnit, orientationSelection)
             love.graphics.rectangle("line", x + 4, y + 4, grid.tileSize - 8, grid.tileSize - 8, 6, 6)
         end
         local orientation = unit.getOrientation and unit:getOrientation() or unit.orientation
+        if orientationSelection and orientationSelection.unit and orientationSelection.unit.id == unit.id then
+            orientation = orientationSelection.direction or orientation
+        end
         local vector = orientationVectors[orientation or "south"]
         if vector then
             local arrowLength = grid.tileSize / 2 - 8
@@ -674,22 +813,49 @@ local function drawHud(scene)
         love.graphics.print(string.format("Choose facing: %s", label), 16, bottomY - 24)
         love.graphics.print("Use arrows to change, Enter to confirm. Facing affects critical hits.", 16, bottomY)
     else
-        love.graphics.print("Controls: Arrows move cursor, Space select, Enter move, A attack, Tab skip turn (auto end)", 16, bottomY)
+        love.graphics.print("Controls: Arrows move cursor, Space open menu, Enter confirm, Tab skip turn, P pause", 16, bottomY)
     end
 end
 
-local function selectUnitAtCursor(scene)
-    local unit = scene.battlefield:getUnitAt(scene.cursor.col, scene.cursor.row)
-    local current = scene.turnManager:currentUnit()
-    if unit and current and unit.id == current.id then
-        clearAttackPreview(scene)
-        scene.selectedUnit = unit
-        refreshHighlights(scene)
+local function drawActionMenu(scene)
+    local menu = scene.actionMenu
+    if not menu or not menu.items or #menu.items == 0 then
+        return
     end
+
+    local width = 240
+    local lineHeight = 24
+    local height = 48 + #menu.items * lineHeight
+    local x = love.graphics.getWidth() - width - 32
+    local y = 72
+
+    love.graphics.setColor(0.08, 0.1, 0.14, 0.85)
+    love.graphics.rectangle("fill", x, y, width, height, 10, 10)
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.setLineWidth(2)
+    love.graphics.rectangle("line", x, y, width, height, 10, 10)
+
+    local stepLabel = string.format("Step %d: Choose action", menu.step or 1)
+    love.graphics.print(stepLabel, x + 16, y + 14)
+
+    local entryY = y + 40
+    for index, item in ipairs(menu.items) do
+        if index == menu.selectedIndex then
+            love.graphics.setColor(0.95, 0.85, 0.4)
+        else
+            love.graphics.setColor(0.85, 0.9, 1)
+        end
+        love.graphics.print(item.label, x + 20, entryY)
+        entryY = entryY + lineHeight
+    end
+    love.graphics.setColor(1, 1, 1)
 end
 
 local function moveSelectedUnit(scene)
     if not scene.selectedUnit or not scene.battleSystem or isAnimating(scene) then
+        return
+    end
+    if not scene.activeAction or scene.activeAction.type ~= "move" then
         return
     end
     local destinationCol, destinationRow = scene.cursor.col, scene.cursor.row
@@ -714,10 +880,16 @@ local function moveSelectedUnit(scene)
             scene.flowMachine:onAnimationsComplete("move")
         end
     end
+    scene.activeAction = nil
+    scene.availableActions = nil
+    scene.turnStep = (scene.turnStep or 1) + 1
 end
 
 local function attackTargetAtCursor(scene)
     if isAnimating(scene) then
+        return
+    end
+    if not scene.activeAction or scene.activeAction.type ~= "attack" then
         return
     end
     local unit = enterAttackPreview(scene)
@@ -738,6 +910,9 @@ local function attackTargetAtCursor(scene)
         scene.flowMachine:onAttackCommitted(false)
         scene.flowMachine:onAnimationsComplete("attack")
     end
+    scene.activeAction = nil
+    scene.availableActions = nil
+    scene.turnStep = (scene.turnStep or 1) + 1
 end
 
 function BattleState.new()
@@ -801,6 +976,7 @@ function BattleState:render(_game)
     drawUnits(self.scene.grid, self.scene.battlefield, self.scene.selectedUnit, self.scene.orientationSelection)
     drawCursor(self.scene.grid, self.scene.cursor)
     drawHud(self.scene)
+    drawActionMenu(self.scene)
 end
 
 function BattleState:keypressed(game, key)
@@ -815,6 +991,22 @@ function BattleState:keypressed(game, key)
             setOrientationDirection(self.scene, direction)
         elseif key == "return" or key == "kpenter" or key == "space" or key == "tab" then
             confirmOrientationSelection(self.scene)
+        end
+        return
+    end
+
+    if self.scene.actionMenu and self.scene.actionMenu.items then
+        if key == "up" then
+            adjustActionMenuSelection(self.scene, -1)
+        elseif key == "down" then
+            adjustActionMenuSelection(self.scene, 1)
+        elseif key == "return" or key == "kpenter" or key == "space" then
+            confirmActionMenuSelection(self.scene)
+        elseif key == "tab" then
+            clearActionMenu(self.scene)
+            if self.scene.flowMachine then
+                self.scene.flowMachine:skipTurn()
+            end
         end
         return
     end
@@ -835,13 +1027,26 @@ function BattleState:keypressed(game, key)
         self.scene.cursor:move(-1, 0)
     elseif key == "right" then
         self.scene.cursor:move(1, 0)
-    elseif key == "space" then
-        selectUnitAtCursor(self.scene)
     elseif key == "return" or key == "kpenter" then
-        moveSelectedUnit(self.scene)
-    elseif key == "a" then
-        attackTargetAtCursor(self.scene)
+        if self.scene.activeAction and self.scene.activeAction.type == "move" then
+            moveSelectedUnit(self.scene)
+        elseif self.scene.activeAction and self.scene.activeAction.type == "attack" then
+            attackTargetAtCursor(self.scene)
+        else
+            if self.scene.availableActions and #self.scene.availableActions > 0 then
+                openActionMenu(self.scene, self.scene.selectedUnit, self.scene.availableActions)
+            end
+        end
+    elseif key == "space" then
+        if self.scene.activeAction then
+            openActionMenu(self.scene, self.scene.selectedUnit, self.scene.availableActions or {})
+        elseif self.scene.availableActions and #self.scene.availableActions > 0 then
+            openActionMenu(self.scene, self.scene.selectedUnit, self.scene.availableActions)
+        end
     elseif key == "tab" then
+        clearActionMenu(self.scene)
+        self.scene.activeAction = nil
+        self.scene.availableActions = nil
         if self.scene.flowMachine then
             self.scene.flowMachine:skipTurn()
         else

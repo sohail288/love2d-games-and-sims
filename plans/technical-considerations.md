@@ -26,6 +26,7 @@
 - Turn resolution aggregates per-action time costs, advancing a global time unit counter so scenarios can throttle expensive abilities or trigger hooks after specific durations.
 - Movement commands build tile-by-tile paths that the battle state tweens through during `love.update(dt)`, separating deterministic grid logic from presentation.
 - The `BattleFlowStateMachine` monitors player phases; `BattleState` forwards action completions and animation callbacks so turn summaries and automatic endings stay synchronised with rendered movement.
+- Action availability is surfaced to the UI through state-machine callbacks, letting the battle scene drive a context menu that sequences move/attack decisions before orientation while tests exercise the same deterministic flow.
 
 ## State Management
 - A lightweight `Game` module coordinates named states, ensuring `enter`, `exit`, `update`, and `render` lifecycles remain isolated per scene.

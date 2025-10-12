@@ -56,11 +56,15 @@ describe("BattleFlowStateMachine", function()
             end
         })
 
+        context.battlefield:moveUnit(context.enemy, 3, 2)
+        context.enemy.col = 3
+        context.enemy.row = 2
+
         machine:beginTurn(context.ally)
         assertEquals(events[1][1], "phase")
         assertEquals(events[1][2], "awaiting")
 
-        context.battleSystem:move(context.ally, 3, 2)
+        context.battleSystem:move(context.ally, 3, 1)
         machine:onMoveCommitted(true)
         machine:onAnimationsComplete("move")
         machine:update(0)
@@ -163,5 +167,43 @@ describe("BattleFlowStateMachine", function()
 
         assertEquals(result, "no_actions")
         assertEquals(machine.state, "idle")
+    end)
+
+    it("surfaces remaining actions through action menu callbacks", function()
+        local context = setupBattle()
+        local menuCalls = {}
+
+        local machine = BattleFlowStateMachine.new({
+            battleSystem = context.battleSystem,
+            battlefield = context.battlefield,
+            onActionMenuRequested = function(_, actions)
+                menuCalls[#menuCalls + 1] = actions
+            end
+        })
+
+        context.battlefield:moveUnit(context.enemy, 3, 2)
+        context.enemy.col = 3
+        context.enemy.row = 2
+
+        machine:beginTurn(context.ally)
+        assertEquals(#menuCalls, 1)
+        assertEquals(menuCalls[1][1], "attack")
+        assertEquals(menuCalls[1][2], "move")
+
+        context.battleSystem:move(context.ally, 3, 1)
+        machine:onMoveCommitted(false)
+        machine:onAnimationsComplete("move")
+        machine:update(0)
+
+        assertEquals(#menuCalls, 2)
+        assertEquals(#menuCalls[2], 1)
+        assertEquals(menuCalls[2][1], "attack")
+
+        context.battleSystem:attack(context.ally, context.enemy)
+        machine:onAttackCommitted(false)
+        machine:onAnimationsComplete("attack")
+        machine:update(0)
+
+        assertEquals(#menuCalls, 2)
     end)
 end)
