@@ -11,6 +11,11 @@
 - The love.js runtime is downloaded during CI to avoid committing large binaries; the workflow keeps the version pinned so cache behaviour stays predictable.
 - Preview HTML is generated from Lua to keep configuration colocated with the rest of the codebase and enable automated tests to validate template changes.
 - Build artifacts should retain the original `game.love` archive for reproducibility and manual debugging when issues surface in the browser runtime.
+- GitHub Actions dependencies (checkout, artifact upload, etc.) must track the latest supported major versions to avoid sudden workflow failures due to deprecations.
+- When GitHub's cache service began returning HTTP 400 responses to `leafo/gh-actions-lua@v9`, disabling the build cache input on v11 restored reliable installs without materially impacting job duration.
+- The Lua installer action may create a workspace-level `.lua` directory; lint discovery scripts must restrict results to regular files and explicitly skip the directory contents so `luac` does not attempt to parse them.
+- GitHub runners may expose `luac` under versioned names (e.g., `luac5.1`); the preview workflow now resolves the compiler path dynamically before linting so syntax checks continue to run even when the unversioned shim is absent.
+- The compiler detector runs as a POSIX shell script, removing the need for a Lua interpreter when linting environments only expose `luac` binaries.
 
 ## Rendering Constraints
 - Battlefield rendering relies on Love2D's immediate mode drawing; separation of concerns keeps drawing isolated from game state logic.

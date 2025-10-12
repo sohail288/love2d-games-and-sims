@@ -67,7 +67,9 @@ local testFiles = {
     "tests.tactics_battle.test_scenarios",
     "tests.tactics_battle.test_game",
     "tests.tactics_battle.test_narrative_states",
-    "tests.test_lovejs_preview_template"
+    "tests.test_lovejs_preview_template",
+    "tests.test_lint_command",
+    "tests.test_detect_luac"
 }
 
 local total = 0
