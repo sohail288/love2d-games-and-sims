@@ -60,6 +60,10 @@ function Game:keypressed(key)
     callIfExists(self._current, "keypressed", self, key)
 end
 
+function Game:textinput(t)
+    callIfExists(self._current, "textinput", self, t)
+end
+
 function Game:mousepressed(x, y, button)
     callIfExists(self._current, "mousepressed", self, x, y, button)
 end
