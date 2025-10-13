@@ -40,6 +40,7 @@ local actionLabels = {
 
 local clearAttackPreview
 local refreshAttackTiles
+local refreshHighlights
 
 local function clearActionMenu(scene)
     scene.actionMenu = nil
@@ -201,7 +202,7 @@ refreshAttackTiles = function(scene)
     end
 end
 
-local function refreshHighlights(scene)
+refreshHighlights = function(scene)
     if not scene.selectedUnit or not scene.battleSystem then
         scene.moveTiles = nil
         clearAttackPreview(scene)
