@@ -98,10 +98,12 @@ end
 function DevMenuState:update(_game, _dt)
 end
 
-local function drawOption(label, x, y, selected)
+local function drawOption(label, x, y, selected, is_error)
     if love and love.graphics then
         if selected then
             love.graphics.setColor(0.9, 0.9, 0.4)
+        elseif is_error then
+            love.graphics.setColor(1, 0.4, 0.4)
         else
             love.graphics.setColor(1, 1, 1)
         end
@@ -122,11 +124,18 @@ function DevMenuState:render(_game)
             local y = 120
             for index, step in ipairs(self.generationSteps) do
                 local content_display = "..."
-                if self.generatedContent[step] then
-                    content_display = dkjson.encode(self.generatedContent[step], { indent = true })
+                local content = self.generatedContent[step]
+                local is_error = false
+                if content then
+                    if type(content) == "table" and type(content.error) == "string" then
+                        content_display = "Error: " .. content.error
+                        is_error = true
+                    else
+                        content_display = dkjson.encode(content, { indent = true })
+                    end
                 end
                 local label = string.format("%d. %s: %s", index, step, content_display)
-                drawOption(label, 80, y, index == self.selectedIndex)
+                drawOption(label, 80, y, index == self.selectedIndex, is_error)
                 y = y + 28
             end
 
@@ -183,13 +192,17 @@ function DevMenuState:keypressed(game, key)
 
         local schema = schemas[step]
         local response = self.apiClient:generate_text(prompt, schema, step)
-        if response and response.choices and response.choices[1] then
+        if response and response.error then
+            local message = response.error.message or "Unknown API error"
+            self.generatedContent[step] = { error = message }
+        elseif response and response.choices and response.choices[1] then
             local content = response.choices[1].message.content
             local success, decoded_json = pcall(dkjson.decode, content)
             if success then
                 self.generatedContent[step] = decoded_json
             else
-                self.generatedContent[step] = { error = "Failed to decode JSON from API." }
+                local decode_message = decoded_json or "Failed to decode JSON from API."
+                self.generatedContent[step] = { error = tostring(decode_message) }
             end
         else
             self.generatedContent[step] = { error = "Error generating content." }
