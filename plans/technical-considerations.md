@@ -39,6 +39,7 @@
 - Unit tests stub the Love2D API to validate state transitions and battle scene initialization without requiring the engine runtime.
 - Narrative states (start menu, world map, cutscenes) compose via callbacks rather than globals so campaign flow can react to battle outcomes while staying testable.
 - World map data is stored in plain Lua tables and mirrored into the shared context, enabling persistence between state transitions without serialisation.
+- The developer menu normalises upstream API failures into structured error messages; rendering treats those entries specially so issues are visible without inspecting logs.
 
 ## World Navigation
 - World maps describe connections as simple graphs; the map module runs a breadth-first search to produce the shortest path between destinations.
