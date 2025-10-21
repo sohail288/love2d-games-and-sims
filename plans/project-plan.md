@@ -22,3 +22,4 @@
 - *2025-10-12*: Added shortest-path world travel with mid-route battles and town visit menus triggered from the map.
 - *2025-10-13*: Added love.js CI preview pipeline scaffolding to publish playable builds from GitHub Actions.
 - *2025-10-13*: Introduced end-of-turn orientation selection with facing-driven critical hit modifiers for tactical combat.
+- *2025-10-21*: Hardened the love.js preview workflow by guaranteeing the Lua compiler installation and adding an override hook for custom toolchains.

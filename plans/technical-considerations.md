@@ -16,6 +16,7 @@
 - The Lua installer action may create a workspace-level `.lua` directory; lint discovery scripts must restrict results to regular files and explicitly skip the directory contents so `luac` does not attempt to parse them.
 - GitHub runners may expose `luac` under versioned names (e.g., `luac5.1`); the preview workflow now resolves the compiler path dynamically before linting so syntax checks continue to run even when the unversioned shim is absent.
 - The compiler detector runs as a POSIX shell script, removing the need for a Lua interpreter when linting environments only expose `luac` binaries.
+- To stabilize linting on fresh GitHub runners, the workflow installs `lua5.1` explicitly so `luac` is guaranteed to exist while still allowing overrides via the `LUAC_EXECUTABLE` environment variable when custom compilers are needed.
 
 ## Rendering Constraints
 - Battlefield rendering relies on Love2D's immediate mode drawing; separation of concerns keeps drawing isolated from game state logic.
