@@ -21,6 +21,11 @@ jobs:
       - name: Install LuaRocks
         uses: leafo/gh-actions-luarocks@v4
 
+      - name: Ensure Lua compiler is available
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.1
+
       - name: Run Lua unit tests
         run: lua tests/run_tests.lua
 

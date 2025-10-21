@@ -46,6 +46,9 @@ lua tests/run_tests.lua
 
 A lightweight lint step checks Lua syntax:
 
+Ensure the Lua compiler is available locally. The helper script `ci_preview/detect_luac.sh` looks for common compiler
+names and supports a `LUAC_EXECUTABLE` override when a custom path is required.
+
 ```bash
 LUAC_EXEC=$(ci_preview/detect_luac.sh)
 find . -type f -name '*.lua' -not -path './vendor/*' -not -path './.lua/*' -print0 | xargs -0 -n1 "$LUAC_EXEC" -p
