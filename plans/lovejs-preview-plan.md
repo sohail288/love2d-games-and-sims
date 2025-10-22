@@ -22,8 +22,9 @@ Create a CI-friendly packaging pipeline that bundles the tactical battle prototy
 - *2025-10-21:* Ensured the CI workflow installs `lua5.1` so `luac` is always available and added an override hook when custom toolchains are required.
 - *2025-10-22:* Migrated the preview bundling step to the maintained `love.js` npm release for LÖVE 11.5 and now build the compatibility runtime with `npx love.js -c` to avoid stale downloads.
 
-### Phase 2 - Automated Preview Publishing *(Planned)*
+### Phase 2 - Automated Preview Publishing *(In Progress)*
 - Publish the preview bundle to GitHub Pages or a static site bucket on every successful build.
+    - *2025-10-22:* Added a GitHub Pages deployment step to the preview workflow. Builds now push the generated bundle to the `github-pages` environment and expose a browser-playable link without requiring a manual download.
 - Gate publishing on main branch builds while keeping artifact uploads for pull requests.
 
 ### Phase 3 - Scenario Matrix *(Planned)*
@@ -34,4 +35,5 @@ Create a CI-friendly packaging pipeline that bundles the tactical battle prototy
 - CI runs Love2D unit tests and linting before attempting to build the preview package.
 - Preview artifacts include `index.html`, `love.js` runtime files, and the packaged `game.love` archive.
 - Artifact download links appear on pull request checks, allowing reviewers to manually verify tactical combat updates in the browser.
+- Successful runs surface a GitHub Pages deployment URL so stakeholders can play the preview without downloading the artifact zip.
 - Documentation explains how to run the preview generator locally and where CI publishes the outputs.

@@ -13,6 +13,7 @@
 - Build artifacts should retain the original `game.love` archive for reproducibility and manual debugging when issues surface in the browser runtime.
 - GitHub Actions dependencies (checkout, artifact upload, etc.) must track the latest supported major versions to avoid sudden workflow failures due to deprecations.
 - Node.js is provisioned during CI so the `npx love.js -c` compatibility build remains reproducible across GitHub runners.
+- GitHub Pages deployments are handled via `actions/upload-pages-artifact` and `actions/deploy-pages` so reviewers can launch the preview without downloading the artifact; the deploy job is skipped for forked pull requests where the token lacks write access.
 - When GitHub's cache service began returning HTTP 400 responses to `leafo/gh-actions-lua@v9`, disabling the build cache input on v11 restored reliable installs without materially impacting job duration.
 - The Lua installer action may create a workspace-level `.lua` directory; lint discovery scripts must restrict results to regular files and explicitly skip the directory contents so `luac` does not attempt to parse them.
 - GitHub runners may expose `luac` under versioned names (e.g., `luac5.1`); the preview workflow now resolves the compiler path dynamically before linting so syntax checks continue to run even when the unversioned shim is absent.

@@ -56,12 +56,15 @@ find . -type f -name '*.lua' -not -path './vendor/*' -not -path './.lua/*' -prin
 
 ### CI love.js Preview
 
-GitHub Actions packages the tactical battle project as a `.love` archive, pairs it with the `love.js` runtime, and uploads the bundle as a downloadable artifact on each push or pull request. The workflow lives at `.github/workflows/lovejs-preview.yml` and performs the following:
+GitHub Actions packages the tactical battle project as a `.love` archive, pairs it with the `love.js` runtime, and uploads the bundle as a downloadable artifact on each push or pull request. The same workflow now publishes the preview to GitHub Pages so reviewers can launch it directly in the browser. The workflow lives at `.github/workflows/lovejs-preview.yml` and performs the following:
 
 1. Run Lua unit tests and linting to guard the build.
 2. Zip `tactics_battle/` into `game.love`.
 3. Use the maintained `love.js` 11.5 npm distribution to build the compatibility runtime via `npx love.js -c`.
 4. Upload the resulting directory as the `lovejs-preview` artifact.
+5. Publish the static site bundle to GitHub Pages and surface a deployment link on each successful run.
+
+When a run finishes, expand the **Deploy to GitHub Pages** step on the workflow summary page to copy the preview URL. GitHub also records the link under the `github-pages` environment for quick access.
 
 To reproduce the preview locally:
 

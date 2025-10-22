@@ -1,5 +1,14 @@
 name: Build love.js Preview
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: lovejs-preview-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ main ]
@@ -62,3 +71,20 @@ jobs:
         with:
           name: lovejs-preview
           path: build/lovejs
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/lovejs
+
+  deploy-preview:
+    needs: build-preview
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
