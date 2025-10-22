@@ -31,6 +31,7 @@ function html_template.renderPreviewHtml(options)
     local canvasId = escapeHtmlAttribute(resolveOption(options, "canvasId", "love-preview-canvas"))
     local gameArchive = escapeHtmlAttribute(resolveOption(options, "gameArchive", "game.love"))
     local loveJsPath = escapeHtmlAttribute(resolveOption(options, "loveJsPath", "love.js"))
+    local gameScriptPath = escapeHtmlAttribute(resolveOption(options, "gameScriptPath", "game.js"))
 
     local html = [[<!DOCTYPE html>
 <html lang="en">
@@ -95,9 +96,11 @@ function html_template.renderPreviewHtml(options)
             document.getElementById('loader').style.display = 'none';
             var script = document.createElement('script');
             script.src = ']] .. loveJsPath .. [[';
+            script.async = true;
             document.body.appendChild(script);
         });
     </script>
+    <script type="text/javascript" src="]] .. gameScriptPath .. [["></script>
 </body>
 </html>]]
 

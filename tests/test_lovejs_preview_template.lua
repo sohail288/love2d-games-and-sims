@@ -14,6 +14,7 @@ describe("ci_preview.html_template", function()
         assertTrue(html:find("Loading...", 1, true) ~= nil, "loading message missing")
         assertTrue(html:find("battle%.love") ~= nil, "game archive reference missing")
         assertTrue(html:find("runtime/love%.js") ~= nil, "love.js path missing")
+        assertTrue(html:find("<script type=\"text/javascript\" src=\"game%.js\"></script>") ~= nil, "game.js script tag missing")
         assertTrue(html:find("id=\"preview%-canvas\"") ~= nil, "canvas id missing")
     end)
 
@@ -37,5 +38,13 @@ describe("ci_preview.html_template", function()
         })
 
         assertTrue(html:find(">Play Tactical Demo<", 1, true) ~= nil, "custom start button label should be present")
+    end)
+
+    it("allows the game script path to be customized", function()
+        local html = template.renderPreviewHtml({
+            gameScriptPath = "compat/game.js"
+        })
+
+        assertTrue(html:find("src=\"compat/game%.js\"") ~= nil, "custom game script path should be present")
     end)
 end)

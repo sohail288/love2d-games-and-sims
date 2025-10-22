@@ -70,6 +70,7 @@ local testFiles = {
     "tests.tactics_battle.test_narrative_states",
     "tests.test_lovejs_preview_template",
     "tests.test_lint_command",
+    "tests.test_lovejs_workflow",
     "tests.test_detect_luac"
 }
 

@@ -2,7 +2,7 @@
 
 - **Status:** In Progress
 - **Owner:** Engineering
-- **Last Updated:** 2025-10-21
+- **Last Updated:** 2025-10-22
 
 ## High Level Overview
 Create a CI-friendly packaging pipeline that bundles the tactical battle prototype as a `.love` archive, combines it with the `love.js` runtime, and emits a browser-playable preview. The preview artifact should be accessible from pull requests and nightly builds so design collaborators can review updates without installing the native Love2D runtime.
@@ -20,6 +20,7 @@ Create a CI-friendly packaging pipeline that bundles the tactical battle prototy
 - *2025-10-16:* Introduced a `detect_luac` helper so the lint step resolves the installed Lua compiler path before invoking syntax checks.
 - *2025-10-16:* Converted the helper to a POSIX shell script so CI no longer requires a Lua interpreter to locate the compiler.
 - *2025-10-21:* Ensured the CI workflow installs `lua5.1` so `luac` is always available and added an override hook when custom toolchains are required.
+- *2025-10-22:* Migrated the preview bundling step to the maintained `love.js` npm release for LÖVE 11.5 and now build the compatibility runtime with `npx love.js -c` to avoid stale downloads.
 
 ### Phase 2 - Automated Preview Publishing *(Planned)*
 - Publish the preview bundle to GitHub Pages or a static site bucket on every successful build.

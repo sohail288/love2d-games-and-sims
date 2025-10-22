@@ -8,10 +8,11 @@
 - Tests set up package paths for project modules to allow running with the standard Lua interpreter.
 
 ## CI Preview Builds
-- The love.js runtime is downloaded during CI to avoid committing large binaries; the workflow keeps the version pinned so cache behaviour stays predictable.
+- The love.js runtime is now produced from the maintained npm package on every build, keeping compatibility aligned with LÖVE 11.5 without committing large binaries.
 - Preview HTML is generated from Lua to keep configuration colocated with the rest of the codebase and enable automated tests to validate template changes.
 - Build artifacts should retain the original `game.love` archive for reproducibility and manual debugging when issues surface in the browser runtime.
 - GitHub Actions dependencies (checkout, artifact upload, etc.) must track the latest supported major versions to avoid sudden workflow failures due to deprecations.
+- Node.js is provisioned during CI so the `npx love.js -c` compatibility build remains reproducible across GitHub runners.
 - When GitHub's cache service began returning HTTP 400 responses to `leafo/gh-actions-lua@v9`, disabling the build cache input on v11 restored reliable installs without materially impacting job duration.
 - The Lua installer action may create a workspace-level `.lua` directory; lint discovery scripts must restrict results to regular files and explicitly skip the directory contents so `luac` does not attempt to parse them.
 - GitHub runners may expose `luac` under versioned names (e.g., `luac5.1`); the preview workflow now resolves the compiler path dynamically before linting so syntax checks continue to run even when the unversioned shim is absent.

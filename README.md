@@ -60,22 +60,22 @@ GitHub Actions packages the tactical battle project as a `.love` archive, pairs 
 
 1. Run Lua unit tests and linting to guard the build.
 2. Zip `tactics_battle/` into `game.love`.
-3. Download the `love.js` 11.4 runtime and drop the generated `index.html` shell into the bundle.
+3. Use the maintained `love.js` 11.5 npm distribution to build the compatibility runtime via `npx love.js -c`.
 4. Upload the resulting directory as the `lovejs-preview` artifact.
 
 To reproduce the preview locally:
 
 ```bash
-mkdir -p build/lovejs
+rm -rf build && mkdir -p build
 cd tactics_battle && zip -9 -r ../build/tactics_battle.love . && cd ..
-curl -L -o build/lovejs-runtime.zip https://github.com/TannerRogalsky/love.js/releases/download/11.4/love.js-11.4.zip
-unzip -o build/lovejs-runtime.zip -d build/lovejs
-mv build/lovejs/love.js-11.4/* build/lovejs/ && rm -rf build/lovejs/love.js-11.4
+npx --yes love.js -c build/tactics_battle.love build/lovejs --title "Tactics Battle Preview"
 cp build/tactics_battle.love build/lovejs/game.love
-lua ci_preview/generate_preview_html.lua --output build/lovejs/index.html
+lua ci_preview/generate_preview_html.lua --output build/lovejs/index.html --game-archive game.love --lovejs-path love.js --game-script game.js
 # optionally customize the launch button label
 # lua ci_preview/generate_preview_html.lua --start-button-label "Play Tactical Demo"
 ```
+
+The `npx --yes love.js` command downloads the compatibility toolchain on demand; install Node.js 18+ locally to mirror the CI environment.
 
 ### Plans and Documentation
 
