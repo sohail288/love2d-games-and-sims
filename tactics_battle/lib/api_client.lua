@@ -1,9 +1,9 @@
 -- a simple http client for making requests to an OpenAI-compatible API
 local https = require("https")
 
-local dkjson = require("tactics_battle.lib.dkjson")
+local dkjson = require("lib.dkjson")
 
-local config = require("tactics_battle.config")
+local config = require("config")
 
 local ApiClient = {}
 ApiClient.__index = ApiClient

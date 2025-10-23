@@ -71,7 +71,9 @@ local testFiles = {
     "tests.test_changed_games",
     "tests.test_lovejs_preview_template",
     "tests.test_preview_index_template",
+    "tests.test_preview_builder",
     "tests.test_lint_command",
+    "tests.test_vendor_dependencies",
     "tests.test_lovejs_workflow",
     "tests.test_detect_luac"
 }

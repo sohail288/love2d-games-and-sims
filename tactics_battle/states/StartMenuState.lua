@@ -1,5 +1,5 @@
-local WorldMap = require("tactics_battle.world.WorldMap")
-local defaultMapConfig = require("tactics_battle.world.default_map")
+local WorldMap = require("world.WorldMap")
+local defaultMapConfig = require("world.default_map")
 
 local StartMenuState = {}
 StartMenuState.__index = StartMenuState

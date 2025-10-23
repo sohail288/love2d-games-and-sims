@@ -1,6 +1,6 @@
-local Game = require("tactics_battle.Game")
-local BattleState = require("tactics_battle.states.BattleState")
-local Scenarios = require("tactics_battle.scenarios.init")
+local Game = require("Game")
+local BattleState = require("states.BattleState")
+local Scenarios = require("scenarios")
 
 local function createStubLove()
     if _G.love then

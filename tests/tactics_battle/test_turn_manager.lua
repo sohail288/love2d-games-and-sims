@@ -1,5 +1,5 @@
-local Unit = require("tactics_battle.world.Unit")
-local TurnManager = require("tactics_battle.systems.TurnManager")
+local Unit = require("world.Unit")
+local TurnManager = require("systems.TurnManager")
 
 describe("TurnManager", function()
     it("orders units by speed", function()
