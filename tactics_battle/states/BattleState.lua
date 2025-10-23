@@ -1,12 +1,12 @@
-local Grid = require("tactics_battle.world.Grid")
-local Unit = require("tactics_battle.world.Unit")
-local Battlefield = require("tactics_battle.world.Battlefield")
-local TurnManager = require("tactics_battle.systems.TurnManager")
-local BattleSystem = require("tactics_battle.systems.BattleSystem")
-local BattleFlowStateMachine = require("tactics_battle.systems.BattleFlowStateMachine")
-local EnemyAI = require("tactics_battle.systems.EnemyAI")
-local Cursor = require("tactics_battle.ui.Cursor")
-local Scenarios = require("tactics_battle.scenarios.init")
+local Grid = require("world.Grid")
+local Unit = require("world.Unit")
+local Battlefield = require("world.Battlefield")
+local TurnManager = require("systems.TurnManager")
+local BattleSystem = require("systems.BattleSystem")
+local BattleFlowStateMachine = require("systems.BattleFlowStateMachine")
+local EnemyAI = require("systems.EnemyAI")
+local Cursor = require("ui.Cursor")
+local Scenarios = require("scenarios")
 
 local BattleState = {}
 BattleState.__index = BattleState

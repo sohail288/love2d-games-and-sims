@@ -1,10 +1,10 @@
-local DialogueSystem = require("tactics_battle.systems.DialogueSystem")
-local CutsceneState = require("tactics_battle.states.CutsceneState")
-local StartMenuState = require("tactics_battle.states.StartMenuState")
-local WorldMapState = require("tactics_battle.states.WorldMapState")
-local WorldMap = require("tactics_battle.world.WorldMap")
-local Game = require("tactics_battle.Game")
-local BattleState = require("tactics_battle.states.BattleState")
+local DialogueSystem = require("systems.DialogueSystem")
+local CutsceneState = require("states.CutsceneState")
+local StartMenuState = require("states.StartMenuState")
+local WorldMapState = require("states.WorldMapState")
+local WorldMap = require("world.WorldMap")
+local Game = require("Game")
+local BattleState = require("states.BattleState")
 
 local function ensureStubLove()
     if _G.love then

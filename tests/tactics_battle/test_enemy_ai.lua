@@ -1,9 +1,9 @@
-local Grid = require("tactics_battle.world.Grid")
-local Battlefield = require("tactics_battle.world.Battlefield")
-local Unit = require("tactics_battle.world.Unit")
-local TurnManager = require("tactics_battle.systems.TurnManager")
-local BattleSystem = require("tactics_battle.systems.BattleSystem")
-local EnemyAI = require("tactics_battle.systems.EnemyAI")
+local Grid = require("world.Grid")
+local Battlefield = require("world.Battlefield")
+local Unit = require("world.Unit")
+local TurnManager = require("systems.TurnManager")
+local BattleSystem = require("systems.BattleSystem")
+local EnemyAI = require("systems.EnemyAI")
 
 local function setupScenario(args)
     args = args or {}

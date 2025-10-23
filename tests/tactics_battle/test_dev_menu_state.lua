@@ -10,7 +10,7 @@ if not newproxy then
     end
 end
 
-local DevMenuState = require("tactics_battle.states.DevMenuState")
+local DevMenuState = require("states.DevMenuState")
 
 describe("DevMenuState", function()
     it("propagates API error messages", function()

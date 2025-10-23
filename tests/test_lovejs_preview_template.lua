@@ -14,10 +14,12 @@ describe("ci_preview.html_template", function()
         assertTrue(html:find("id=\"loading%-text\"") ~= nil, "loading text element should have an id for runtime status updates")
         assertTrue(html:find("battle%.love") ~= nil, "game archive reference missing")
         assertTrue(html:find("runtime/love%.js") ~= nil, "love.js path missing")
-        assertTrue(html:find("<script type=\"text/javascript\" src=\"game%.js\"></script>") ~= nil, "game.js script tag missing")
+        assertTrue(html:find("var gameScriptPath = 'game%.js';") ~= nil, "game script path should be embedded for dynamic loading")
         assertTrue(html:find("id=\"canvas\"") ~= nil, "canvas id missing")
         assertTrue(html:find("document.getElementById('canvas')", 1, true) ~= nil, "Module should bind to the standard canvas id")
         assertTrue(html:find("Love%(Module%)") ~= nil, "love.js runtime should be invoked once the script loads")
+        assertTrue(html:find("Unable to load compiled game script", 1, true) ~= nil, "game script load errors should surface to reviewers")
+        assertTrue(html:find("Downloading game bundle", 1, true) ~= nil, "loader should communicate when the compiled game is downloading")
     end)
 
     it("escapes html sensitive values", function()
@@ -47,7 +49,7 @@ describe("ci_preview.html_template", function()
             gameScriptPath = "compat/game.js"
         })
 
-        assertTrue(html:find("src=\"compat/game%.js\"") ~= nil, "custom game script path should be present")
+        assertTrue(html:find("var gameScriptPath = 'compat/game%.js';") ~= nil, "custom game script path should be present")
     end)
 
     it("exposes runtime launch status messaging", function()

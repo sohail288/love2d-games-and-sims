@@ -1,6 +1,6 @@
-local ApiClient = require("tactics_battle.lib.api_client")
-local SimpleYaml = require("tactics_battle.lib.simple_yaml")
-local dkjson = require("tactics_battle.lib.dkjson")
+local ApiClient = require("lib.api_client")
+local SimpleYaml = require("lib.simple_yaml")
+local dkjson = require("lib.dkjson")
 
 local DevMenuState = {}
 DevMenuState.__index = DevMenuState

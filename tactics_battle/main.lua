@@ -1,9 +1,9 @@
-local Game = require("tactics_battle.Game")
-local BattleState = require("tactics_battle.states.BattleState")
-local StartMenuState = require("tactics_battle.states.StartMenuState")
-local WorldMapState = require("tactics_battle.states.WorldMapState")
-local CutsceneState = require("tactics_battle.states.CutsceneState")
-local DevMenuState = require("tactics_battle.states.DevMenuState")
+local Game = require("Game")
+local BattleState = require("states.BattleState")
+local StartMenuState = require("states.StartMenuState")
+local WorldMapState = require("states.WorldMapState")
+local CutsceneState = require("states.CutsceneState")
+local DevMenuState = require("states.DevMenuState")
 
 local game
 

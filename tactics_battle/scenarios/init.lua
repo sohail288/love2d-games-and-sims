@@ -1,7 +1,7 @@
 local pairs = pairs
 local tableSort = table.sort
 
-local trainingGround = require("tactics_battle.scenarios.training_ground")
+local trainingGround = require("scenarios.training_ground")
 
 local scenarios = {
     [trainingGround.id] = trainingGround

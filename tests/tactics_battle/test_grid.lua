@@ -1,4 +1,4 @@
-local Grid = require("tactics_battle.world.Grid")
+local Grid = require("world.Grid")
 
 describe("Grid", function()
     it("converts tile coordinates to world coordinates", function()

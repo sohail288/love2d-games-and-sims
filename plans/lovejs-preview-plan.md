@@ -28,6 +28,8 @@ Create a CI-friendly packaging pipeline that bundles the tactical battle prototy
     - *2025-10-23:* Updated the preview HTML shell to invoke `Love(Module)` after the runtime downloads and to surface loader status so GitHub Pages visitors no longer see a blank canvas when the script finishes downloading.
     - *2025-10-24:* Standardized the preview canvas id to `canvas` so the love.js compatibility runtime can attach pointer and mouse events without throwing `addEventListener` errors during initialization.
     - *2025-10-24:* Introduced a manifest-driven preview planner that zips each changed game, rebuilds its love.js bundle, and emits an index so reviewers can swap between projects from a single launcher.
+    - *2025-10-25:* Sequenced the loader to fetch `love.js` first and then stream the compiled `game.js` bundle, updating status text for each phase so reviewers immediately see progress instead of a blank canvas.
+    - *2025-10-25:* Hardened the preview builder to accept the boolean success codes returned by Lua 5.4's `os.execute`, fixing local tooling runs that previously crashed before packaging archives.
 - Gate publishing on main branch builds while keeping artifact uploads for pull requests.
 
 ### Phase 3 - Scenario Matrix *(Planned)*

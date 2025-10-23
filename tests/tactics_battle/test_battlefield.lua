@@ -1,6 +1,6 @@
-local Grid = require("tactics_battle.world.Grid")
-local Battlefield = require("tactics_battle.world.Battlefield")
-local Unit = require("tactics_battle.world.Unit")
+local Grid = require("world.Grid")
+local Battlefield = require("world.Battlefield")
+local Unit = require("world.Unit")
 
 describe("Battlefield", function()
     it("adds units to empty tiles", function()
