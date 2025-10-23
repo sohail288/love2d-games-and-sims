@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -53,18 +55,38 @@ jobs:
           rm -rf build
           mkdir -p build
 
-      - name: Create tactics battle .love archive
+      - name: Determine changed files
+        shell: bash
         run: |
-          cd tactics_battle
-          zip -9 -r ../build/tactics_battle.love .
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "${{ github.base_ref }}" --depth=1
+            BASE_COMMIT=$(git merge-base HEAD "origin/${{ github.base_ref }}")
+          else
+            if git rev-parse HEAD^ >/dev/null 2>&1; then
+              BASE_COMMIT=$(git rev-parse HEAD^)
+            else
+              BASE_COMMIT=""
+            fi
+          fi
 
-      - name: Build love.js compatibility runtime
-        run: |
-          npx --yes love.js -c build/tactics_battle.love build/lovejs --title "Tactics Battle Preview"
-          cp build/tactics_battle.love build/lovejs/game.love
+          if [ -n "$BASE_COMMIT" ]; then
+            git diff --name-only "$BASE_COMMIT" HEAD > build/changed_files.txt
+          else
+            git ls-tree -r --name-only HEAD > build/changed_files.txt
+          fi
 
-      - name: Generate preview HTML shell
-        run: lua ci_preview/generate_preview_html.lua --output build/lovejs/index.html --game-archive game.love --lovejs-path love.js --game-script game.js
+          echo "Changed files:"
+          cat build/changed_files.txt
+
+      - name: Detect preview games
+        run: lua ci_preview/detect_changed_games.lua --changed-file-list build/changed_files.txt --output build/preview_plan.lua --summary-output build/preview_games.txt
+
+      - name: Build love.js preview bundles
+        run: lua ci_preview/build_previews.lua --plan build/preview_plan.lua --build-root build --output-root build/lovejs
+
+      - name: Generate preview index
+        run: lua ci_preview/generate_preview_index.lua --plan build/preview_plan.lua --output build/lovejs/index.html --title "Love2D Preview Launcher"
 
       - name: Upload preview artifact
         uses: actions/upload-artifact@v4

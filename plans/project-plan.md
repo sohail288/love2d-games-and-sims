@@ -23,3 +23,4 @@
 - *2025-10-13*: Added love.js CI preview pipeline scaffolding to publish playable builds from GitHub Actions.
 - *2025-10-13*: Introduced end-of-turn orientation selection with facing-driven critical hit modifiers for tactical combat.
 - *2025-10-21*: Hardened the love.js preview workflow by guaranteeing the Lua compiler installation and adding an override hook for custom toolchains.
+- *2025-10-24*: Upgraded the preview pipeline to detect changed games, rebuild each love.js bundle, and ship a multi-game launcher so reviewers can pick the desired demo from one page.
