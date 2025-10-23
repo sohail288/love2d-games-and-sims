@@ -13,16 +13,20 @@ end
 describe("lovejs preview workflow", function()
     local workflowYaml = readFile(workflowPath)
 
-    it("uses the maintained love.js bundler via npx", function()
-        assertTrue(workflowYaml:find("npx%s+%-%-yes%s+love%.js%s+%-c") ~= nil, "expected workflow to invoke love.js with compatibility mode")
-    end)
-
     it("provisions node before running the bundler", function()
         assertTrue(workflowYaml:find("uses:%s+actions/setup%-node@v3") ~= nil, "expected workflow to install Node.js")
     end)
 
-    it("passes the game.js script to the preview generator", function()
-        assertTrue(workflowYaml:find("%-%-game%-script%s+game%.js") ~= nil, "expected preview generator to register game.js")
+    it("detects changed games before building previews", function()
+        assertTrue(workflowYaml:find("ci_preview/detect_changed_games.lua") ~= nil, "expected workflow to call the changed game detector")
+    end)
+
+    it("builds previews through the Lua orchestration script", function()
+        assertTrue(workflowYaml:find("ci_preview/build_previews.lua") ~= nil, "expected workflow to invoke the preview builder script")
+    end)
+
+    it("generates an index page that links all previews", function()
+        assertTrue(workflowYaml:find("ci_preview/generate_preview_index.lua") ~= nil, "expected workflow to emit a preview index page")
     end)
 
     it("publishes the preview bundle to GitHub Pages", function()

@@ -56,31 +56,30 @@ find . -type f -name '*.lua' -not -path './vendor/*' -not -path './.lua/*' -prin
 
 ### CI love.js Preview
 
-GitHub Actions packages the tactical battle project as a `.love` archive, pairs it with the `love.js` runtime, and uploads the bundle as a downloadable artifact on each push or pull request. The same workflow now publishes the preview to GitHub Pages so reviewers can launch it directly in the browser. The workflow lives at `.github/workflows/lovejs-preview.yml` and performs the following:
+GitHub Actions now inspects the repository to figure out which games changed, rebuilds each of those projects into its own love.js bundle, and publishes an index page that lets reviewers launch the desired preview directly in the browser. The workflow lives at `.github/workflows/lovejs-preview.yml` and performs the following:
 
 1. Run Lua unit tests and linting to guard the build.
-2. Zip `tactics_battle/` into `game.love`.
-3. Use the maintained `love.js` 11.5 npm distribution to build the compatibility runtime via `npx love.js -c`.
-4. Upload the resulting directory as the `lovejs-preview` artifact.
-5. Publish the static site bundle to GitHub Pages and surface a deployment link on each successful run.
+2. Diff the branch against its base to capture the list of changed files and map them to the game manifest defined in `ci_preview/game_manifest.lua`.
+3. Package every affected game into a `.love` archive and invoke the maintained `love.js` 11.5 npm distribution through `ci_preview/build_previews.lua` so each build lands in `build/lovejs/<game>/`.
+4. Emit a launcher index with `ci_preview/generate_preview_index.lua`, allowing reviewers to swap between previews without editing URLs.
+5. Upload the resulting directory as the `lovejs-preview` artifact and publish the static site bundle to GitHub Pages so a deployment link appears on each successful run.
 
 When a run finishes, expand the **Deploy to GitHub Pages** step on the workflow summary page to copy the preview URL. GitHub also records the link under the `github-pages` environment for quick access.
 
-To reproduce the preview locally:
+To reproduce the multi-game preview locally:
 
 ```bash
 rm -rf build && mkdir -p build
-cd tactics_battle && zip -9 -r ../build/tactics_battle.love . && cd ..
-npx --yes love.js -c build/tactics_battle.love build/lovejs --title "Tactics Battle Preview"
-cp build/tactics_battle.love build/lovejs/game.love
-lua ci_preview/generate_preview_html.lua --output build/lovejs/index.html --game-archive game.love --lovejs-path love.js --game-script game.js
-# optionally customize the launch button label
-# lua ci_preview/generate_preview_html.lua --start-button-label "Play Tactical Demo"
+# capture the files you want to rebuild; passing an empty list forces all games to build
+> build/changed_files.txt
+lua ci_preview/detect_changed_games.lua --changed-file-list build/changed_files.txt --output build/preview_plan.lua
+lua ci_preview/build_previews.lua --plan build/preview_plan.lua --build-root build --output-root build/lovejs
+lua ci_preview/generate_preview_index.lua --plan build/preview_plan.lua --output build/lovejs/index.html
 ```
 
-The `npx --yes love.js` command downloads the compatibility toolchain on demand; install Node.js 18+ locally to mirror the CI environment.
+The `build_previews.lua` helper invokes `npx --yes love.js -c` for each selected game. Install Node.js 18+ locally to mirror the CI environment.
 
-Open `build/lovejs/index.html` in a browser and press **Launch Preview** to stream the runtime. The loader now reports download progress and surfaces an error message if the love.js script fails to initialize so you can retry without refreshing. Keep the preview canvas element's id set to `canvas`; the compatibility runtime queries `#canvas` internally when wiring mouse handlers, and renaming the element results in `Cannot read properties of null (reading 'addEventListener')` errors after `Love(Module)` starts.
+Open `build/lovejs/index.html` in a browser, pick the desired project from the dropdown, and press **Load in page** to stream the runtime. The loader still reports download progress and surfaces an error message if the love.js script fails to initialize so you can retry without refreshing. Keep each generated preview canvas element's id set to `canvas`; the compatibility runtime queries `#canvas` internally when wiring mouse handlers, and renaming the element results in `Cannot read properties of null (reading 'addEventListener')` errors after `Love(Module)` starts.
 
 ### Plans and Documentation
 
