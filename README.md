@@ -80,6 +80,8 @@ lua ci_preview/generate_preview_html.lua --output build/lovejs/index.html --game
 
 The `npx --yes love.js` command downloads the compatibility toolchain on demand; install Node.js 18+ locally to mirror the CI environment.
 
+Open `build/lovejs/index.html` in a browser and press **Launch Preview** to stream the runtime. The loader now reports download progress and surfaces an error message if the love.js script fails to initialize so you can retry without refreshing.
+
 ### Plans and Documentation
 
 - `plans/project-plan.md` tracks the roadmap and history of features.

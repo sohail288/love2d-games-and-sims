@@ -79,7 +79,7 @@ function html_template.renderPreviewHtml(options)
 </head>
 <body>
     <div id="loader">
-        <p>]] .. loadingMessage .. [[</p>
+        <p id="loading-text">]] .. loadingMessage .. [[</p>
         <button id="start-button" type="button">]] .. startButtonLabel .. [[</button>
     </div>
     <canvas id="]] .. canvasId .. [[" oncontextmenu="event.preventDefault()"></canvas>
@@ -92,11 +92,57 @@ function html_template.renderPreviewHtml(options)
             })(),
             arguments: [']] .. gameArchive .. [[']
         };
-        document.getElementById('start-button').addEventListener('click', function() {
-            document.getElementById('loader').style.display = 'none';
+        var loaderElement = document.getElementById('loader');
+        var loadingTextElement = document.getElementById('loading-text');
+        var startButton = document.getElementById('start-button');
+        var defaultButtonLabel = startButton.textContent;
+        var runtimeAttached = false;
+
+        function updateLoadingState(message, isError) {
+            if (loadingTextElement) {
+                loadingTextElement.textContent = message;
+            }
+            loaderElement.style.display = 'block';
+            if (isError) {
+                loaderElement.setAttribute('data-error', 'true');
+            } else {
+                loaderElement.removeAttribute('data-error');
+            }
+        }
+
+        function handleRuntimeError(message, event) {
+            console.error(message, event || '');
+            startButton.disabled = false;
+            startButton.textContent = defaultButtonLabel;
+            updateLoadingState(message, true);
+        }
+
+        startButton.addEventListener('click', function() {
+            if (runtimeAttached) {
+                return;
+            }
+
+            runtimeAttached = true;
+            startButton.disabled = true;
+            startButton.textContent = 'Launching...';
+            updateLoadingState('Downloading love.js runtime...', false);
+
             var script = document.createElement('script');
             script.src = ']] .. loveJsPath .. [[';
             script.async = true;
+            script.addEventListener('load', function() {
+                if (typeof Love === 'function') {
+                    loaderElement.style.display = 'none';
+                    Love(Module);
+                } else {
+                    runtimeAttached = false;
+                    handleRuntimeError('love.js runtime failed to expose Love(Module).');
+                }
+            });
+            script.addEventListener('error', function(event) {
+                runtimeAttached = false;
+                handleRuntimeError('Unable to load love.js runtime.', event);
+            });
             document.body.appendChild(script);
         });
     </script>
