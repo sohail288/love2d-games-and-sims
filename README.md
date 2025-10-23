@@ -80,7 +80,7 @@ lua ci_preview/generate_preview_html.lua --output build/lovejs/index.html --game
 
 The `npx --yes love.js` command downloads the compatibility toolchain on demand; install Node.js 18+ locally to mirror the CI environment.
 
-Open `build/lovejs/index.html` in a browser and press **Launch Preview** to stream the runtime. The loader now reports download progress and surfaces an error message if the love.js script fails to initialize so you can retry without refreshing.
+Open `build/lovejs/index.html` in a browser and press **Launch Preview** to stream the runtime. The loader now reports download progress and surfaces an error message if the love.js script fails to initialize so you can retry without refreshing. Keep the preview canvas element's id set to `canvas`; the compatibility runtime queries `#canvas` internally when wiring mouse handlers, and renaming the element results in `Cannot read properties of null (reading 'addEventListener')` errors after `Love(Module)` starts.
 
 ### Plans and Documentation
 

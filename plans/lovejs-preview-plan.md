@@ -26,6 +26,7 @@ Create a CI-friendly packaging pipeline that bundles the tactical battle prototy
 - Publish the preview bundle to GitHub Pages or a static site bucket on every successful build.
     - *2025-10-22:* Added a GitHub Pages deployment step to the preview workflow. Builds now push the generated bundle to the `github-pages` environment and expose a browser-playable link without requiring a manual download.
     - *2025-10-23:* Updated the preview HTML shell to invoke `Love(Module)` after the runtime downloads and to surface loader status so GitHub Pages visitors no longer see a blank canvas when the script finishes downloading.
+    - *2025-10-24:* Standardized the preview canvas id to `canvas` so the love.js compatibility runtime can attach pointer and mouse events without throwing `addEventListener` errors during initialization.
 - Gate publishing on main branch builds while keeping artifact uploads for pull requests.
 
 ### Phase 3 - Scenario Matrix *(Planned)*

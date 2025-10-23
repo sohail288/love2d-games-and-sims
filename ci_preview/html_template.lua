@@ -28,7 +28,6 @@ function html_template.renderPreviewHtml(options)
     local backgroundColor = escapeHtmlAttribute(resolveOption(options, "backgroundColor", "#0f172a"))
     local loadingMessage = escapeHtmlAttribute(resolveOption(options, "loadingMessage", "Loading tactical battle preview..."))
     local startButtonLabel = escapeHtmlAttribute(resolveOption(options, "startButtonLabel", "Launch Preview"))
-    local canvasId = escapeHtmlAttribute(resolveOption(options, "canvasId", "love-preview-canvas"))
     local gameArchive = escapeHtmlAttribute(resolveOption(options, "gameArchive", "game.love"))
     local loveJsPath = escapeHtmlAttribute(resolveOption(options, "loveJsPath", "love.js"))
     local gameScriptPath = escapeHtmlAttribute(resolveOption(options, "gameScriptPath", "game.js"))
@@ -82,11 +81,11 @@ function html_template.renderPreviewHtml(options)
         <p id="loading-text">]] .. loadingMessage .. [[</p>
         <button id="start-button" type="button">]] .. startButtonLabel .. [[</button>
     </div>
-    <canvas id="]] .. canvasId .. [[" oncontextmenu="event.preventDefault()"></canvas>
+    <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
     <script>
         var Module = {
             canvas: (function() {
-                var canvas = document.getElementById(']] .. canvasId .. [[');
+                var canvas = document.getElementById('canvas');
                 canvas.tabIndex = 0;
                 return canvas;
             })(),
