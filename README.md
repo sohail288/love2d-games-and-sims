@@ -56,26 +56,31 @@ find . -type f -name '*.lua' -not -path './vendor/*' -not -path './.lua/*' -prin
 
 ### CI love.js Preview
 
-GitHub Actions packages the tactical battle project as a `.love` archive, pairs it with the `love.js` runtime, and uploads the bundle as a downloadable artifact on each push or pull request. The workflow lives at `.github/workflows/lovejs-preview.yml` and performs the following:
+GitHub Actions packages the tactical battle project as a `.love` archive, pairs it with the `love.js` runtime, and uploads the bundle as a downloadable artifact on each push or pull request. The same workflow now publishes the preview to GitHub Pages so reviewers can launch it directly in the browser. The workflow lives at `.github/workflows/lovejs-preview.yml` and performs the following:
 
 1. Run Lua unit tests and linting to guard the build.
 2. Zip `tactics_battle/` into `game.love`.
-3. Download the `love.js` 11.4 runtime and drop the generated `index.html` shell into the bundle.
+3. Use the maintained `love.js` 11.5 npm distribution to build the compatibility runtime via `npx love.js -c`.
 4. Upload the resulting directory as the `lovejs-preview` artifact.
+5. Publish the static site bundle to GitHub Pages and surface a deployment link on each successful run.
+
+When a run finishes, expand the **Deploy to GitHub Pages** step on the workflow summary page to copy the preview URL. GitHub also records the link under the `github-pages` environment for quick access.
 
 To reproduce the preview locally:
 
 ```bash
-mkdir -p build/lovejs
+rm -rf build && mkdir -p build
 cd tactics_battle && zip -9 -r ../build/tactics_battle.love . && cd ..
-curl -L -o build/lovejs-runtime.zip https://github.com/TannerRogalsky/love.js/releases/download/11.4/love.js-11.4.zip
-unzip -o build/lovejs-runtime.zip -d build/lovejs
-mv build/lovejs/love.js-11.4/* build/lovejs/ && rm -rf build/lovejs/love.js-11.4
+npx --yes love.js -c build/tactics_battle.love build/lovejs --title "Tactics Battle Preview"
 cp build/tactics_battle.love build/lovejs/game.love
-lua ci_preview/generate_preview_html.lua --output build/lovejs/index.html
+lua ci_preview/generate_preview_html.lua --output build/lovejs/index.html --game-archive game.love --lovejs-path love.js --game-script game.js
 # optionally customize the launch button label
 # lua ci_preview/generate_preview_html.lua --start-button-label "Play Tactical Demo"
 ```
+
+The `npx --yes love.js` command downloads the compatibility toolchain on demand; install Node.js 18+ locally to mirror the CI environment.
+
+Open `build/lovejs/index.html` in a browser and press **Launch Preview** to stream the runtime. The loader now reports download progress and surfaces an error message if the love.js script fails to initialize so you can retry without refreshing. Keep the preview canvas element's id set to `canvas`; the compatibility runtime queries `#canvas` internally when wiring mouse handlers, and renaming the element results in `Cannot read properties of null (reading 'addEventListener')` errors after `Love(Module)` starts.
 
 ### Plans and Documentation
 
