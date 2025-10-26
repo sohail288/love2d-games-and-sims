@@ -66,6 +66,7 @@ local testFiles = {
     "tests.tactics_battle.test_enemy_ai",
     "tests.tactics_battle.test_scenarios",
     "tests.tactics_battle.test_game",
+    "tests.tactics_battle.test_api_client",
     "tests.tactics_battle.test_dev_menu_state",
     "tests.tactics_battle.test_narrative_states",
     "tests.test_changed_games",
