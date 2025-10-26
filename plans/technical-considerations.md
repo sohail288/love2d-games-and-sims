@@ -41,6 +41,12 @@
 - The `BattleFlowStateMachine` monitors player phases; `BattleState` forwards action completions and animation callbacks so turn summaries and automatic endings stay synchronised with rendered movement.
 - Action availability is surfaced to the UI through state-machine callbacks, letting the battle scene drive a context menu that sequences move/attack decisions before orientation while tests exercise the same deterministic flow.
 
+## Networking
+- HTTP access is abstracted behind `lib/http_client.lua`, which exposes a `fetch` interface that proxies to synchronous `https`
+  requests on desktop builds and the asynchronous `fetch.lua` bridge under love.js. Callers must provide callbacks when the
+  transport reports `uses_fetch()` to avoid runtime assertions and should treat responses uniformly as `{ status, body, headers }`
+  tuples.
+
 ## State Management
 - A lightweight `Game` module coordinates named states, ensuring `enter`, `exit`, `update`, and `render` lifecycles remain isolated per scene.
 - States receive the game context so they can share assets (fonts, configuration) without resorting to globals, easing future additions like pause or world map scenes.
