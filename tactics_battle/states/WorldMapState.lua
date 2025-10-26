@@ -1,6 +1,6 @@
-local WorldMap = require("tactics_battle.world.WorldMap")
-local defaultMapConfig = require("tactics_battle.world.default_map")
-local Scenarios = require("tactics_battle.scenarios.init")
+local WorldMap = require("world.WorldMap")
+local defaultMapConfig = require("world.default_map")
+local Scenarios = require("scenarios")
 
 local WorldMapState = {}
 WorldMapState.__index = WorldMapState

@@ -1,4 +1,4 @@
-local DialogueSystem = require("tactics_battle.systems.DialogueSystem")
+local DialogueSystem = require("systems.DialogueSystem")
 
 local CutsceneState = {}
 CutsceneState.__index = CutsceneState

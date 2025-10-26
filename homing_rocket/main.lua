@@ -4,7 +4,7 @@
 -- -- generate explosions for the rockets
 local GAME_STATE_TITLE = "Targetting"
 local Vector = require('Vector')
-local Timer = require("knife.timer")
+local Timer = require("vendor/knife/timer")
 WINDOW_WIDTH = 960
 WINDOW_HEIGHT = 700
 VIRTUAL_WIDTH = WINDOW_WIDTH

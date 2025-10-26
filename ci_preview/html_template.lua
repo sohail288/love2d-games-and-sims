@@ -96,6 +96,7 @@ function html_template.renderPreviewHtml(options)
         var startButton = document.getElementById('start-button');
         var defaultButtonLabel = startButton.textContent;
         var runtimeAttached = false;
+        var gameScriptPath = ']] .. gameScriptPath .. [[';
 
         function updateLoadingState(message, isError) {
             if (loadingTextElement) {
@@ -111,9 +112,42 @@ function html_template.renderPreviewHtml(options)
 
         function handleRuntimeError(message, event) {
             console.error(message, event || '');
+            runtimeAttached = false;
             startButton.disabled = false;
             startButton.textContent = defaultButtonLabel;
             updateLoadingState(message, true);
+        }
+
+        function loadGameScript() {
+            updateLoadingState('Downloading game bundle...', false);
+            var gameScript = document.createElement('script');
+            gameScript.src = gameScriptPath;
+            gameScript.async = true;
+            gameScript.addEventListener('load', function() {
+                if (typeof Love === 'function') {
+                    loaderElement.style.display = 'none';
+                    Love(Module);
+                } else {
+                    handleRuntimeError('love.js runtime failed to expose Love(Module).');
+                }
+            });
+            gameScript.addEventListener('error', function(event) {
+                handleRuntimeError('Unable to load compiled game script.', event);
+            });
+            document.body.appendChild(gameScript);
+        }
+
+        function attachRuntime() {
+            var runtimeScript = document.createElement('script');
+            runtimeScript.src = ']] .. loveJsPath .. [[';
+            runtimeScript.async = true;
+            runtimeScript.addEventListener('load', function() {
+                loadGameScript();
+            });
+            runtimeScript.addEventListener('error', function(event) {
+                handleRuntimeError('Unable to load love.js runtime.', event);
+            });
+            document.body.appendChild(runtimeScript);
         }
 
         startButton.addEventListener('click', function() {
@@ -125,27 +159,9 @@ function html_template.renderPreviewHtml(options)
             startButton.disabled = true;
             startButton.textContent = 'Launching...';
             updateLoadingState('Downloading love.js runtime...', false);
-
-            var script = document.createElement('script');
-            script.src = ']] .. loveJsPath .. [[';
-            script.async = true;
-            script.addEventListener('load', function() {
-                if (typeof Love === 'function') {
-                    loaderElement.style.display = 'none';
-                    Love(Module);
-                } else {
-                    runtimeAttached = false;
-                    handleRuntimeError('love.js runtime failed to expose Love(Module).');
-                }
-            });
-            script.addEventListener('error', function(event) {
-                runtimeAttached = false;
-                handleRuntimeError('Unable to load love.js runtime.', event);
-            });
-            document.body.appendChild(script);
+            attachRuntime();
         });
     </script>
-    <script type="text/javascript" src="]] .. gameScriptPath .. [["></script>
 </body>
 </html>]]
 

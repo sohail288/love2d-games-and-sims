@@ -1,6 +1,6 @@
-local ApiClient = require("tactics_battle.lib.api_client")
-local SimpleYaml = require("tactics_battle.lib.simple_yaml")
-local dkjson = require("tactics_battle.lib.dkjson")
+local ApiClient = require("lib.api_client")
+local SimpleYaml = require("lib.simple_yaml")
+local dkjson = require("lib.dkjson")
 
 local DevMenuState = {}
 DevMenuState.__index = DevMenuState
@@ -87,6 +87,7 @@ function DevMenuState.new()
     self.saveStatus = ""
     self.editMode = false
     self.editText = ""
+    self.pendingStep = nil
     return self
 end
 
@@ -96,6 +97,9 @@ function DevMenuState:enter(game)
 end
 
 function DevMenuState:update(_game, _dt)
+    if self.apiClient and type(self.apiClient.update) == "function" then
+        self.apiClient:update(_dt)
+    end
 end
 
 local function drawOption(label, x, y, selected, is_error)
@@ -177,6 +181,11 @@ function DevMenuState:keypressed(game, key)
             self.selectedIndex = 1
         end
     elseif key == "return" or key == "kpenter" then
+        if self.pendingStep then
+            self.saveStatus = "Request in progress..."
+            return
+        end
+
         local step = self.generationSteps[self.selectedIndex]
 
         local context_prompt = "You are generating a story for a tactics RPG. Here is the context so far:\n"
@@ -191,21 +200,44 @@ function DevMenuState:keypressed(game, key)
         local prompt = context_prompt .. "\nNow, generate the " .. step .. "."
 
         local schema = schemas[step]
-        local response = self.apiClient:generate_text(prompt, schema, step)
-        if response and response.error then
-            local message = response.error.message or "Unknown API error"
-            self.generatedContent[step] = { error = message }
-        elseif response and response.choices and response.choices[1] then
-            local content = response.choices[1].message.content
-            local success, decoded_json = pcall(dkjson.decode, content)
-            if success then
-                self.generatedContent[step] = decoded_json
-            else
-                local decode_message = decoded_json or "Failed to decode JSON from API."
-                self.generatedContent[step] = { error = tostring(decode_message) }
+        self.pendingStep = step
+        self.saveStatus = "Requesting " .. step .. "..."
+        self.generatedContent[step] = { request_in_flight = true }
+
+        local function handle_response(response)
+            if self.pendingStep ~= step then
+                return
             end
-        else
-            self.generatedContent[step] = { error = "Error generating content." }
+
+            self.pendingStep = nil
+
+            if response and response.error then
+                local message = response.error.message or "Unknown API error"
+                self.generatedContent[step] = { error = message }
+                self.saveStatus = "Error fetching " .. step
+                return
+            end
+
+            if response and response.choices and response.choices[1] then
+                local content = response.choices[1].message.content
+                local success, decoded_json = pcall(dkjson.decode, content)
+                if success then
+                    self.generatedContent[step] = decoded_json
+                    self.saveStatus = "Received generated content for " .. step
+                else
+                    self.generatedContent[step] = { error = "Failed to decode generated content." }
+                    self.saveStatus = "Error decoding response for " .. step
+                end
+                return
+            end
+
+            self.generatedContent[step] = { error = "Unexpected API response." }
+            self.saveStatus = "Unexpected response for " .. step
+        end
+
+        local response = self.apiClient:generate_text(prompt, schema, step, handle_response)
+        if response ~= nil then
+            handle_response(response)
         end
     elseif key == "e" then
         self.editMode = true

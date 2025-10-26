@@ -10,7 +10,7 @@ if not newproxy then
     end
 end
 
-local DevMenuState = require("tactics_battle.states.DevMenuState")
+local DevMenuState = require("states.DevMenuState")
 
 describe("DevMenuState", function()
     it("propagates API error messages", function()
@@ -18,9 +18,10 @@ describe("DevMenuState", function()
         local step = state.generationSteps[state.selectedIndex]
 
         state.apiClient = {
-            generate_text = function()
-                return { error = { message = "Simulated API failure" } }
-            end
+            generate_text = function(_, _, _, _, callback)
+                callback({ error = { message = "Simulated API failure" } })
+            end,
+            update = function() end
         }
 
         state:keypressed({}, "return")

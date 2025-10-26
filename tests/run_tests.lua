@@ -66,12 +66,16 @@ local testFiles = {
     "tests.tactics_battle.test_enemy_ai",
     "tests.tactics_battle.test_scenarios",
     "tests.tactics_battle.test_game",
+    "tests.tactics_battle.test_api_client",
+    "tests.tactics_battle.test_http_client",
     "tests.tactics_battle.test_dev_menu_state",
     "tests.tactics_battle.test_narrative_states",
     "tests.test_changed_games",
     "tests.test_lovejs_preview_template",
     "tests.test_preview_index_template",
+    "tests.test_preview_builder",
     "tests.test_lint_command",
+    "tests.test_vendor_dependencies",
     "tests.test_lovejs_workflow",
     "tests.test_detect_luac"
 }
