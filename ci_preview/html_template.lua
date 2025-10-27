@@ -52,6 +52,7 @@ function html_template.renderPreviewHtml(options)
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            padding-bottom: 7rem;
         }
         #loader {
             text-align: center;
@@ -74,6 +75,50 @@ function html_template.renderPreviewHtml(options)
         button:hover {
             background-color: #2563eb;
         }
+        #virtual-keyboard {
+            position: fixed;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 2rem);
+            max-width: 520px;
+            display: none;
+            flex-direction: column;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+        #virtual-keyboard[data-enabled="true"] {
+            display: flex;
+        }
+        .vk-row {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .vk-key {
+            flex: 1;
+            padding: 0.75rem 0;
+            font-size: 1.1rem;
+            background: rgba(30, 64, 175, 0.85);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            backdrop-filter: blur(6px);
+        }
+        .vk-key:hover,
+        .vk-key:focus {
+            background: rgba(37, 99, 235, 0.9);
+        }
+        .vk-key.pressed {
+            background: rgba(29, 78, 216, 1);
+            transform: translateY(1px);
+        }
+        .vk-key--wide {
+            flex: 2.25;
+        }
+        .vk-key--spacer {
+            flex: 0.5;
+            visibility: hidden;
+        }
     </style>
 </head>
 <body>
@@ -82,6 +127,23 @@ function html_template.renderPreviewHtml(options)
         <button id="start-button" type="button">]] .. startButtonLabel .. [[</button>
     </div>
     <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+    <div id="virtual-keyboard" hidden>
+        <div class="vk-row">
+            <button type="button" class="vk-key vk-key--wide" data-key="ArrowUp" aria-label="Move up">▲</button>
+        </div>
+        <div class="vk-row">
+            <button type="button" class="vk-key" data-key="ArrowLeft" aria-label="Move left">◀</button>
+            <button type="button" class="vk-key" data-key="ArrowDown" aria-label="Move down">▼</button>
+            <button type="button" class="vk-key" data-key="ArrowRight" aria-label="Move right">▶</button>
+        </div>
+        <div class="vk-row">
+            <button type="button" class="vk-key" data-key="z" aria-label="Primary action">A</button>
+            <button type="button" class="vk-key" data-key="x" aria-label="Secondary action">B</button>
+            <div class="vk-key vk-key--spacer" aria-hidden="true"></div>
+            <button type="button" class="vk-key" data-key="Enter" aria-label="Start">Start</button>
+            <button type="button" class="vk-key" data-key="Escape" aria-label="Menu">Menu</button>
+        </div>
+    </div>
     <script>
         var Module = {
             canvas: (function() {
@@ -97,6 +159,7 @@ function html_template.renderPreviewHtml(options)
         var defaultButtonLabel = startButton.textContent;
         var runtimeAttached = false;
         var gameScriptPath = ']] .. gameScriptPath .. [[';
+        var activeVirtualKeys = Object.create(null);
 
         function updateLoadingState(message, isError) {
             if (loadingTextElement) {
@@ -149,6 +212,123 @@ function html_template.renderPreviewHtml(options)
             });
             document.body.appendChild(runtimeScript);
         }
+
+        function createKeyboardEvent(type, key) {
+            var eventInit = {
+                key: key,
+                code: key,
+                bubbles: true,
+                cancelable: true,
+                composed: true
+            };
+
+            try {
+                return new KeyboardEvent(type, eventInit);
+            } catch (error) {
+                var legacyEvent = document.createEvent('KeyboardEvent');
+                legacyEvent.initKeyboardEvent(type, true, true, window, key, 0, '', false, key);
+                return legacyEvent;
+            }
+        }
+
+        function dispatchVirtualKey(type, key) {
+            var canvas = Module.canvas;
+            if (!canvas) {
+                return;
+            }
+
+            var event = createKeyboardEvent(type, key);
+            canvas.dispatchEvent(event);
+        }
+
+        function shouldEnableVirtualKeyboard() {
+            return 'ontouchstart' in window || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0);
+        }
+
+        function setupVirtualKeyboard() {
+            var virtualKeyboard = document.getElementById('virtual-keyboard');
+            if (!virtualKeyboard || !shouldEnableVirtualKeyboard()) {
+                return;
+            }
+
+            virtualKeyboard.removeAttribute('hidden');
+            virtualKeyboard.setAttribute('data-enabled', 'true');
+
+            var canvas = Module.canvas;
+            var keyButtons = virtualKeyboard.querySelectorAll('[data-key]');
+
+            function releaseKey(key) {
+                if (!activeVirtualKeys[key]) {
+                    return;
+                }
+
+                delete activeVirtualKeys[key];
+                dispatchVirtualKey('keyup', key);
+            }
+
+            keyButtons.forEach(function(button) {
+                var key = button.getAttribute('data-key');
+                if (!key) {
+                    return;
+                }
+
+                button.addEventListener('pointerdown', function(event) {
+                    event.preventDefault();
+                    if (canvas && typeof canvas.focus === 'function') {
+                        canvas.focus();
+                    }
+
+                    if (activeVirtualKeys[key]) {
+                        return;
+                    }
+
+                    activeVirtualKeys[key] = true;
+                    button.classList.add('pressed');
+                    dispatchVirtualKey('keydown', key);
+                    if (typeof button.setPointerCapture === 'function') {
+                        try {
+                            button.setPointerCapture(event.pointerId);
+                        } catch (captureError) {
+                            /* ignore capture errors on unsupported browsers */
+                        }
+                    }
+                });
+
+                button.addEventListener('pointerup', function(event) {
+                    event.preventDefault();
+                    button.classList.remove('pressed');
+                    releaseKey(key);
+                });
+
+                button.addEventListener('pointercancel', function(event) {
+                    event.preventDefault();
+                    button.classList.remove('pressed');
+                    releaseKey(key);
+                });
+
+                button.addEventListener('pointerleave', function(event) {
+                    if (!button.classList.contains('pressed')) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    button.classList.remove('pressed');
+                    releaseKey(key);
+                });
+            });
+
+            window.addEventListener('blur', function() {
+                Object.keys(activeVirtualKeys).forEach(function(key) {
+                    var button = virtualKeyboard.querySelector('[data-key="' + key + '"]');
+                    if (button) {
+                        button.classList.remove('pressed');
+                    }
+                    releaseKey(key);
+                });
+            });
+        }
+
+        setupVirtualKeyboard();
 
         startButton.addEventListener('click', function() {
             if (runtimeAttached) {

@@ -79,6 +79,10 @@ lua ci_preview/generate_preview_index.lua --plan build/preview_plan.lua --output
 
 The `build_previews.lua` helper invokes `npx --yes love.js -c` for each selected game. Install Node.js 18+ locally to mirror the CI environment.
 
+Touch devices automatically display a virtual keyboard overlay beneath the canvas. The controls mirror the arrow keys alongside
+primary, secondary, start, and menu buttons, forwarding synthesized keyboard events to the Love2D runtime so mobile reviewers
+can play without bringing extra hardware.
+
 Open `build/lovejs/index.html` in a browser, pick the desired project from the dropdown, and press **Load in page** to stream the runtime. The loader still reports download progress and surfaces an error message if the love.js script fails to initialize so you can retry without refreshing. Keep each generated preview canvas element's id set to `canvas`; the compatibility runtime queries `#canvas` internally when wiring mouse handlers, and renaming the element results in `Cannot read properties of null (reading 'addEventListener')` errors after `Love(Module)` starts.
 
 ### Plans and Documentation

@@ -58,4 +58,13 @@ describe("ci_preview.html_template", function()
         assertTrue(html:find("Downloading love.js runtime", 1, true) ~= nil, "should surface runtime download status text")
         assertTrue(html:find("Launching...", 1, true) ~= nil, "start button should communicate launch progress")
     end)
+
+    it("includes a touch-friendly virtual keyboard", function()
+        local html = template.renderPreviewHtml({})
+
+        assertTrue(html:find("id=\"virtual-keyboard\"", 1, true) ~= nil, "virtual keyboard container should be present")
+        assertTrue(html:find("data-key=\"ArrowUp\"", 1, true) ~= nil, "virtual keyboard should expose directional keys")
+        assertTrue(html:find("setupVirtualKeyboard", 1, true) ~= nil, "virtual keyboard setup logic should be embedded")
+        assertTrue(html:find("new KeyboardEvent", 1, true) ~= nil, "virtual keyboard should synthesize keyboard events for the canvas")
+    end)
 end)
