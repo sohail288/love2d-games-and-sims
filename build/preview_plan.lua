@@ -1,0 +1,1 @@
+return { games = { { id = 'tactics_battle', name = 'Tactical Battle', root = 'tactics_battle', loveArchive = 'tactics_battle.love', previewTitle = 'Tactics Battle Preview', startButtonLabel = 'Launch Tactics Battle', includeVirtualKeyboard = true } } }

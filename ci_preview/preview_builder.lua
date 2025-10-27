@@ -111,6 +111,7 @@ function preview_builder.buildGame(plan, options, executor)
         gameArchive = "game.love",
         loveJsPath = "love.js",
         gameScriptPath = "game.js",
+        includeVirtualKeyboard = plan.includeVirtualKeyboard or false,
     })
 
     preview_builder.writeFile(outputDir .. "/index.html", html)

@@ -26,6 +26,7 @@ manifest.games = {
             "tactics_battle/",
             "tests/tactics_battle/",
         },
+        includeVirtualKeyboard = true,
     }),
     makeGame({
         id = "homing_rocket",
