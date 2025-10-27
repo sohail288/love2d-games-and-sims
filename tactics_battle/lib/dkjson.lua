@@ -224,7 +224,7 @@ local function parse_string(s, pos)
       local substr = s:sub(pos, i - 1)
       if has_escapes then
         -- process escape sequences
-        substr = substr:gsub("\\.", escape_char_map)
+        substr = substr:gsub("\\(.)", escape_char_map)
         -- `gsub` does not support `\uXXXX` sequences, so they are handled
         -- separately.
         substr = substr:gsub("\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])",
@@ -240,15 +240,19 @@ local function parse_string(s, pos)
       if not next_char:match("[bfnrt/\"\\u]") then
         return nil, string.format("invalid escape sequence '\\%s' at pos %s",
                                   str_or_nil(next_char), i)
-      elseif next_char == 'u' then
+      end
+
+      local advance = 1
+      if next_char == 'u' then
         -- Test for `\uXXXX` sequence.
         if not s:sub(i + 2, i + 5):match("^[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]$") then
           return nil, string.format("invalid hex code at pos %s", i)
         else
-          i = i + 5
+          advance = 5
         end
       end
-      i = i + 1
+
+      i = i + advance + 1
       has_escapes = true
     end
   end

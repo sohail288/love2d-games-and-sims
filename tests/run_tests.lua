@@ -69,6 +69,7 @@ local testFiles = {
     "tests.tactics_battle.test_api_client",
     "tests.tactics_battle.test_http_client",
     "tests.tactics_battle.test_dev_menu_state",
+    "tests.tactics_battle.test_dkjson",
     "tests.tactics_battle.test_narrative_states",
     "tests.test_changed_games",
     "tests.test_lovejs_preview_template",
