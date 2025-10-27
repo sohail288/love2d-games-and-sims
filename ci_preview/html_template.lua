@@ -213,22 +213,56 @@ function html_template.renderPreviewHtml(options)
             document.body.appendChild(runtimeScript);
         }
 
+        var virtualKeyCodeMap = {
+            ArrowUp: 38,
+            ArrowDown: 40,
+            ArrowLeft: 37,
+            ArrowRight: 39,
+            Enter: 13,
+            Escape: 27,
+            z: 90,
+            x: 88
+        };
+
         function createKeyboardEvent(type, key) {
+            var keyCode = virtualKeyCodeMap[key] || key.toUpperCase().charCodeAt(0);
             var eventInit = {
                 key: key,
                 code: key,
+                keyCode: keyCode,
+                which: keyCode,
                 bubbles: true,
                 cancelable: true,
                 composed: true
             };
 
+            var event;
+
             try {
-                return new KeyboardEvent(type, eventInit);
+                event = new KeyboardEvent(type, eventInit);
             } catch (error) {
                 var legacyEvent = document.createEvent('KeyboardEvent');
                 legacyEvent.initKeyboardEvent(type, true, true, window, key, 0, '', false, key);
-                return legacyEvent;
+                event = legacyEvent;
             }
+
+            if (!('keyCode' in event) || event.keyCode === 0) {
+                Object.defineProperty(event, 'keyCode', {
+                    get: function() {
+                        return keyCode;
+                    }
+                });
+            }
+
+            if (!('which' in event) || event.which === 0) {
+                Object.defineProperty(event, 'which', {
+                    get: function() {
+                        return keyCode;
+                    }
+                });
+            }
+
+            return event;
         }
 
         function dispatchVirtualKey(type, key) {
@@ -237,8 +271,26 @@ function html_template.renderPreviewHtml(options)
                 return;
             }
 
-            var event = createKeyboardEvent(type, key);
-            canvas.dispatchEvent(event);
+            var keyCode = virtualKeyCodeMap[key] || key.toUpperCase().charCodeAt(0);
+            var targets = [canvas, document, window];
+
+            targets.forEach(function(target) {
+                if (!target) {
+                    return;
+                }
+
+                var event = createKeyboardEvent(type, key);
+
+                if (!('keyCode' in event) || event.keyCode === 0) {
+                    try {
+                        event.keyCode = keyCode;
+                    } catch (assignError) {
+                        /* ignore assignment errors when keyCode is readonly */
+                    }
+                }
+
+                target.dispatchEvent(event);
+            });
         }
 
         function shouldEnableVirtualKeyboard() {
