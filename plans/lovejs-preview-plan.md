@@ -2,7 +2,7 @@
 
 - **Status:** In Progress
 - **Owner:** Engineering
-- **Last Updated:** 2025-10-22
+- **Last Updated:** 2025-10-26
 
 ## High Level Overview
 Create a CI-friendly packaging pipeline that bundles the tactical battle prototype as a `.love` archive, combines it with the `love.js` runtime, and emits a browser-playable preview. The preview artifact should be accessible from pull requests and nightly builds so design collaborators can review updates without installing the native Love2D runtime.
@@ -30,6 +30,7 @@ Create a CI-friendly packaging pipeline that bundles the tactical battle prototy
     - *2025-10-24:* Introduced a manifest-driven preview planner that zips each changed game, rebuilds its love.js bundle, and emits an index so reviewers can swap between projects from a single launcher.
     - *2025-10-25:* Sequenced the loader to fetch `love.js` first and then stream the compiled `game.js` bundle, updating status text for each phase so reviewers immediately see progress instead of a blank canvas.
     - *2025-10-25:* Hardened the preview builder to accept the boolean success codes returned by Lua 5.4's `os.execute`, fixing local tooling runs that previously crashed before packaging archives.
+    - *2025-10-26:* Added a touch-friendly virtual keyboard overlay so mobile reviewers can send keyboard input from the browser canvas without pairing external hardware.
 - Gate publishing on main branch builds while keeping artifact uploads for pull requests.
 
 ### Phase 3 - Scenario Matrix *(Planned)*
